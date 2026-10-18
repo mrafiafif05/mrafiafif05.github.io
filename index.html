@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Odoo Vault — Kredensial Database</title>
+<title>Aliria Vault — Kredensial Database</title>
 <meta name="description" content="Penyimpan terenkripsi kredensial database Odoo per project.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -263,7 +263,7 @@ main::-webkit-scrollbar-thumb:hover{background:var(--accent)}
 <div id="lock" class="hidden">
   <form class="lock-box" id="lockForm" autocomplete="off">
     <div class="lock-ico">🔐</div>
-    <div class="lock-title">Odoo Vault</div>
+    <div class="lock-title">Aliria Vault</div>
     <div class="lock-sub" id="lockSub">Masukkan password untuk membuka vault</div>
     <input class="lock-input" id="lockPw" type="password" placeholder="••••••••" autocomplete="off" maxlength="64" required>
     <div class="lock-err" id="lockErr"></div>
@@ -519,7 +519,7 @@ function uid(){
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
 }
 function freshDb(){
-  return { projects: [], meta: null, orgName: 'Odoo Vault', settings: defaultSettings() };
+  return { projects: [], meta: null, orgName: 'Aliria Vault', settings: defaultSettings() };
 }
 function defaultSettings(){
   return { pushNotifEnabled: false, billingReminderEnabled: false, reminderDaysBefore: 3, reminderTime: '07:00' };
@@ -531,7 +531,7 @@ function normalizeDb(d){
   if (!out.settings || typeof out.settings !== 'object') out.settings = defaultSettings();
   const ds = defaultSettings();
   for (const k of Object.keys(ds)) if (out.settings[k] === undefined) out.settings[k] = ds[k];
-  if (typeof out.orgName !== 'string' || !out.orgName) out.orgName = 'Odoo Vault';
+  if (typeof out.orgName !== 'string' || !out.orgName) out.orgName = 'Aliria Vault';
   return out;
 }
 function todayLabel(){
@@ -652,7 +652,7 @@ function mergeOnLoad(gist, local){
     projects: mergeArrClient(gist.projects || [], local.projects || []),
     meta: gist.meta || local.meta || null,
     settings: local.settings || gist.settings || defaultSettings(),
-    orgName: local.orgName || gist.orgName || 'Odoo Vault',
+    orgName: local.orgName || gist.orgName || 'Aliria Vault',
   });
 }
 
@@ -2124,8 +2124,8 @@ $('npTest').addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         included_segments: ['All'],
-        headings: { en: 'Odoo Vault', id: 'Odoo Vault' },
-        contents: { en: 'Notif uji dari Odoo Vault', id: 'Notif uji dari Odoo Vault' },
+        headings: { en: 'Aliria Vault', id: 'Aliria Vault' },
+        contents: { en: 'Notif uji dari Aliria Vault', id: 'Notif uji dari Aliria Vault' },
         url: location.origin + location.pathname,
       })
     });

@@ -216,7 +216,7 @@ jobs:
               process.exit(0);
             }
 
-            const orgName = db.orgName || 'Odoo Vault';
+            const orgName = db.orgName || 'Aliria Vault';
             let heading, bodyText;
             if (qualifying.length === 1){
               const b = qualifying[0];

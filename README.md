@@ -1,4 +1,4 @@
-# Odoo Vault
+# Aliria Vault
 
 Aplikasi web single-file untuk **menyimpan kredensial database Odoo per project** — terenkripsi di browser sebelum disinkronkan ke GitHub Gist lewat Cloudflare Worker. Tanpa server backend, tanpa build tool: vanilla HTML + Web Crypto API.
 
@@ -42,7 +42,7 @@ Situs live di `https://<username>.github.io`.
 
 1. Buat Gist baru di [gist.github.com](https://gist.github.com) — filename `alteco-data.json`, content:
    ```json
-   {"projects":[],"meta":null,"orgName":"Odoo Vault","settings":{"pushNotifEnabled":false,"billingReminderEnabled":false,"reminderDaysBefore":3,"reminderTime":"07:00"}}
+   {"projects":[],"meta":null,"orgName":"Aliria Vault","settings":{"pushNotifEnabled":false,"billingReminderEnabled":false,"reminderDaysBefore":3,"reminderTime":"07:00"}}
    ```
 2. **Create secret gist** → salin **Gist ID** dari URL.
 3. Pasang ke `index.html`:

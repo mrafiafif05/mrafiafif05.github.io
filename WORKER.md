@@ -1,6 +1,6 @@
 # Cloudflare Worker — alteco-writer
 
-Write proxy untuk Odoo Vault. Semua perubahan data dari browser dikirim ke Worker ini, bukan langsung ke GitHub Gist API. Worker juga menjadi proxy untuk pengiriman push notification OneSignal.
+Write proxy untuk Aliria Vault. Semua perubahan data dari browser dikirim ke Worker ini, bukan langsung ke GitHub Gist API. Worker juga menjadi proxy untuk pengiriman push notification OneSignal.
 
 > Catatan: seluruh field sensitif (password, master password, email, phone) sudah **terenkripsi di browser** (AES-GCM) sebelum dikirim ke Worker/Gist — Worker hanya memindahkan blob terenkripsi dan melakukan merge by `id` + `updatedAt`.
 
