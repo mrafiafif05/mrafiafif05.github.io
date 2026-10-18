@@ -418,8 +418,8 @@ main::-webkit-scrollbar-thumb:hover{background:var(--accent)}
 <div id="toast"></div>
 
 <script>
-const PASS_ADMIN = '19950328';
-const PASS_VIEW  = '20251208';
+const PASS_ADMIN = '20060531';
+const PASS_LEGACY = '19950328';
 const LS_KEY     = 'odoo_vault_v1';
 const GIST_ID    = '7d7efa17459b6f9e606d83c1a80c7c7f';
 const GIST_FILE  = 'alteco-data.json';
@@ -594,6 +594,17 @@ async function decryptObj(key, ivB64, payloadB64){
   );
   return JSON.parse(new TextDecoder().decode(pt));
 }
+async function rekeyObj(node, oldKey, newKey){
+  if (!node || typeof node !== 'object') return;
+  if (typeof node.iv === 'string' && typeof node.payload === 'string'){
+    const obj = await decryptObj(oldKey, node.iv, node.payload);
+    const enc = await encryptObj(newKey, obj);
+    node.iv = enc.iv;
+    node.payload = enc.payload;
+    return;
+  }
+  for (const k of Object.keys(node)) await rekeyObj(node[k], oldKey, newKey);
+}
 
 function localLoad(){
   try{
@@ -763,7 +774,7 @@ function lockBusy(on){
 }
 async function attemptUnlock(pw, silent){
   setLockError('');
-  if (pw !== PASS_ADMIN && pw !== PASS_VIEW){
+  if (pw !== PASS_ADMIN){
     if (silent){
       clearSession();
       setLockError('Sesi berakhir — masukkan password lagi');
@@ -777,8 +788,9 @@ async function attemptUnlock(pw, silent){
     $('lockPw').focus();
     return false;
   }
-  role = pw === PASS_ADMIN ? 'admin' : 'viewer';
+  role = 'admin';
   lockBusy(true);
+  let migratedCode = false;
   try{
     if (!db.meta){
       const salt = randomBytes(16);
@@ -794,19 +806,36 @@ async function attemptUnlock(pw, silent){
       }catch{
         throw new Error('bad');
       }
+      let ok = false;
       try{
         const chk = await decryptObj(key, db.meta.check.iv, db.meta.check.payload);
-        if (chk?.m !== CHECK_MAGIC) throw new Error('bad');
-      }catch{
-        setLockError('Vault rusak — data tidak bisa didekripsi', 'Kontak admin; jangan menimpa data.');
-        lockBusy(false);
-        if (silent) clearSession();
-        return false;
+        ok = chk?.m === CHECK_MAGIC;
+      }catch{ ok = false; }
+      if (!ok){
+        let oldKey = null;
+        try{
+          const k2 = await deriveKey(PASS_LEGACY, b64ToBytes(db.meta.salt));
+          const chk = await decryptObj(k2, db.meta.check.iv, db.meta.check.payload);
+          if (chk?.m === CHECK_MAGIC) oldKey = k2;
+        }catch{}
+        if (!oldKey){
+          setLockError('Vault rusak — data tidak bisa didekripsi', 'Kontak admin; jangan menimpa data.');
+          lockBusy(false);
+          if (silent) clearSession();
+          return false;
+        }
+        const newSalt = randomBytes(16);
+        key = await deriveKey(PASS_ADMIN, newSalt);
+        await rekeyObj(db, oldKey, key);
+        db.meta = { salt: bytesToB64(newSalt), check: await encryptObj(key, { m: CHECK_MAGIC }) };
+        migratedCode = true;
       }
       vaultKey = key;
+      if (migratedCode) save();
     }
     saveSession(pw);
     await enterApp();
+    if (migratedCode) toast('Kode akses diperbarui — kode lama tidak berlaku lagi');
     return true;
   }catch(e){
     setLockError('Gagal membuka vault');
@@ -2165,7 +2194,17 @@ async function init(){
   else db = normalizeDb(remote || local || freshDb());
   if (remote?.meta && local?.meta && remote.meta.salt !== local.meta.salt){
     try{
-      _migrateLocalKey = await deriveKey(PASS_ADMIN, b64ToBytes(local.meta.salt));
+      const lSalt = b64ToBytes(local.meta.salt);
+      let mk = await deriveKey(PASS_ADMIN, lSalt);
+      try{
+        const c = await decryptObj(mk, local.meta.check.iv, local.meta.check.payload);
+        if (c?.m !== CHECK_MAGIC) throw new Error('x');
+      }catch{
+        mk = await deriveKey(PASS_LEGACY, lSalt);
+        const c = await decryptObj(mk, local.meta.check.iv, local.meta.check.payload);
+        if (c?.m !== CHECK_MAGIC) throw new Error('x');
+      }
+      _migrateLocalKey = mk;
     }catch{
       _migrateLocalKey = null;
     }

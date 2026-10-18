@@ -8,7 +8,7 @@ Aplikasi web single-file untuk **menyimpan kredensial database Odoo per project*
 
 - **Enkripsi klien** — semua field (master password, password DB, email, phone, dll.) dienkripsi AES-GCM-256 dengan kunci dari PBKDF2 (310k iterasi) sebelum meninggalkan browser. Gist/localStorage hanya berisi blob terenkripsi.
 - **Model per project (`v:2`)** — nama project sebagai judul kartu; dalam kartu: identitas & field master (host, GitHub, go-live, **pitchdeck**, email, password email, phone, **PIC**), accordion Overview/Plan, catatan, lalu **segmented tab** berisi **General Key** (baris datar key/value — nama db = key, master password Odoo = value; **＋ Tambah** & editor inline per baris) dan **Tagihan** (nama layanan + harga — format **Rp otomatis**, boleh **negatif** untuk refund/kredit — lalu badge jatuh tempo, ✎ edit / 🗑 hapus per baris). Pilihan tab diingat **per project** (default General Key). Tagihan = **3 field**, jatuh tempo = **radio periode** yang mengisi datepicker **dari tanggal awal** (nilai datepicker saat dibuka / hasil edit manual; radio yang sudah aktif tidak mengubah tanggal) saat diklik: **Sekali bayar +0** = kembali ke tanggal awal (datepicker bebas, boleh lampau), **Bulanan +30 hari**, **Tahunan +365 hari** — datepicker selalu editable; pengulangan tagihan tetap per kalender (anchor tempo), chip ⟳ tampil untuk tagihan berulang.
-- **Dua peran** — `PASS_ADMIN` (lihat + tambah/edit/hapus + kirim notif uji), `PASS_VIEW` (lihat & copy saja).
+- **Satu peran** — `PASS_ADMIN` (kode akses tunggal: lihat + tambah/edit/hapus + kirim notif uji).
 - **Sinkron multi-device** — localStorage (instan) + Cloudflare Worker read-merge-write ke Gist (anti data-hilang saat edit bersamaan), soft-delete tombstone.
 - **Sesi unlock** — tetap terbuka selama tab aktif (termasuk setelah refresh); tutup tab = login lagi. Lock manual dengan ikon 🔒.
 - **Push notif siaga** — toggle subscribe OneSignal + tombol "Kirim notif uji" (admin).
@@ -86,21 +86,20 @@ Wajib 5 repository secrets: `GIST_ID`, `GIST_PAT`, `ONESIGNAL_APP_ID`, `ONESIGNA
 
 ## Cara Pakai
 
-1. Buka situs → masukkan **password** (`PASS_ADMIN` untuk admin, `PASS_VIEW` untuk viewer).
+1. Buka situs → masukkan **kode akses** (`PASS_ADMIN`).
 2. Vault kosong terbentuk otomatis pada kunjungan pertama — klik **＋ Tambah** untuk menyimpan project Odoo pertama.
 3. Isi form: nama project (wajib), host/GitHub/go-live/pitchdeck (link — baru bisa diklik bila diawali `https://`), overview/plan (teks, bisa dilipat di kartu), email + password email + phone + **PIC**, lalu catatan. **General Key** dan **Tagihan** tidak diisi lewat form — kelola lewat **tab** di dalam kartu (tab diingat **per project**, default General Key): **＋ Tambah** / **✎** / **🗑** per baris; tagihan = 3 field — nama layanan (wajib), harga (format **Rp otomatis**, **boleh negatif** untuk refund/kredit), dan jatuh tempo berupa **radio periode** yang **mengisi datepicker dari tanggal awal** (tersimpan saat dibuka / hasil edit manual; radio yang sudah aktif tidak mengubah tanggal) — **Sekali bayar +0** kembali ke tanggal awal (datepicker bebas, boleh lampau), **Bulanan +30 hari**, **Tahunan +365 hari** — datepicker tetap bebas diedit; pengulangan tetap per kalender dari anchor tempo).
 4. **Sesi**: setelah unlock, sesi disimpan per-tab (`sessionStorage`) — refresh tetap masuk otomatis; **tutup tab** atau klik **🔒 Lock** untuk keluar.
 
-### Ubah password
+### Ubah kode akses
 
-Password role ada di `index.html`:
+Kode akses ada di `index.html`:
 ```javascript
-const PASS_ADMIN = '19950328';
-const PASS_VIEW  = '20251208';
+const PASS_ADMIN = '<kode-akses>';
 ```
-Ganti sesuai kebutuhan, commit & push.
+Ganti sesuai kebutuhan, commit & push. `PASS_LEGACY` hanya kunci migrasi otomatis dari kode lama — bisa dihapus setelah semua perangkat pernah membuka vault dengan kode baru.
 
-> **Penting**: kunci enkripsi vault diturunkan dari `PASS_ADMIN`. Jika mengubah `PASS_ADMIN`, data lama tidak bisa didekripsi lagi — backup Gist dulu, atau re-encrypt manual.
+> **Penting**: kunci enkripsi vault diturunkan dari `PASS_ADMIN`. Mengganti kode kini **bermigrasi otomatis** saat unlock pertama (re-encrypt seluruh data + salt baru; kode lama langsung tidak berlaku lagi). **Segera update secret `VAULT_PASS` di GitHub Actions ke kode baru** supaya workflow notifikasi tetap bisa mendekripsi Gist, dan backup Gist sebelum commit.
 
 ---
 
