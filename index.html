@@ -274,7 +274,7 @@ main::-webkit-scrollbar-thumb:hover{background:var(--accent)}
 
 <div id="app">
   <header>
-    <div class="brand"><span class="dot"></span><span>Odoo<span class="full"> Vault</span></span></div>
+    <div class="brand"><span class="dot"></span><span>Aliria<span class="full"> Vault</span></span></div>
     <span class="role-chip" id="roleChip"></span>
     <span class="h-spacer"></span>
     <input id="search" type="search" placeholder="Cari project, db, email…" autocomplete="off">
@@ -608,7 +608,7 @@ function localLoad(){
 async function gistLoad(){
   const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
     cache: 'no-store',
-    headers: { 'Accept': 'application/vnd.github+json', 'User-Agent': 'odoo-vault' }
+    headers: { 'Accept': 'application/vnd.github+json', 'User-Agent': 'aliria-vault' }
   });
   if (r.status === 404) throw new Error('gist-missing');
   if (!r.ok) throw new Error('gist ' + r.status);

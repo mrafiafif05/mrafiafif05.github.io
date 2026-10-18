@@ -148,7 +148,7 @@ jobs:
             if (!osAppId || !osKey){ console.error('ONESIGNAL_APP_ID / ONESIGNAL_REST_KEY belum diset'); process.exit(1); }
             if (!pass){ console.error('VAULT_PASS belum diset (isi dengan PASS_ADMIN vault)'); process.exit(1); }
 
-            const ghHdr = { 'Authorization': `Bearer ${gistPat}`, 'Accept': 'application/vnd.github+json', 'User-Agent': 'odoo-vault-cron' };
+            const ghHdr = { 'Authorization': `Bearer ${gistPat}`, 'Accept': 'application/vnd.github+json', 'User-Agent': 'aliria-vault-cron' };
 
             const gist = await req('GET', `https://api.github.com/gists/${gistId}`, ghHdr);
             const content = gist.files?.['alteco-data.json']?.content;
