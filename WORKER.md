@@ -1,6 +1,8 @@
 # Cloudflare Worker — alteco-writer
 
-Write proxy untuk Kelola Alteco. Semua perubahan data dari browser dikirim ke Worker ini, bukan langsung ke GitHub Gist API. Worker juga menjadi proxy untuk pengiriman push notification OneSignal.
+Write proxy untuk Odoo Vault. Semua perubahan data dari browser dikirim ke Worker ini, bukan langsung ke GitHub Gist API. Worker juga menjadi proxy untuk pengiriman push notification OneSignal.
+
+> Catatan: seluruh field sensitif (password, master password, email, phone) sudah **terenkripsi di browser** (AES-GCM) sebelum dikirim ke Worker/Gist — Worker hanya memindahkan blob terenkripsi dan melakukan merge by `id` + `updatedAt`.
 
 ---
 
@@ -33,11 +35,11 @@ Tambahkan di: **Cloudflare Dashboard → Workers & Pages → `alteco-writer` →
 2. **Workers & Pages → Create application → Create Worker**
 3. Beri nama: `alteco-writer` → **Deploy**
 4. Klik **Edit code** → hapus isi default → paste kode di bawah
-5. Ganti `https://dionisiusnp.github.io` dengan domain GitHub Pages-mu (baris `Access-Control-Allow-Origin`)
+5. Pastikan daftar `ALLOWED` di kode berisi domain GitHub Pages-mu + origin lokal yang dipakai (lihat bagian Kode Worker)
 6. Klik **Deploy**
 7. Tambahkan 4 secrets (lihat tabel di atas)
 8. Salin URL Worker (format: `https://alteco-writer.<subdomain>.workers.dev`)
-9. Paste ke `WORKER_URL` di `todolist/index.html` baris ~598
+9. Paste ke `WORKER_URL` di `index.html` (konstanta `WORKER_URL`)
 
 ---
 
@@ -46,8 +48,15 @@ Tambahkan di: **Cloudflare Dashboard → Workers & Pages → `alteco-writer` →
 ```javascript
 export default {
   async fetch(request, env) {
+    const ALLOWED = [
+      'https://mrafiafif05.github.io',
+      'http://localhost',
+      'http://localhost:8080',
+      'http://127.0.0.1:8080',
+    ];
+    const origin = request.headers.get('Origin') || '';
     const cors = {
-      'Access-Control-Allow-Origin': 'https://dionisiusnp.github.io',
+      'Access-Control-Allow-Origin': ALLOWED.includes(origin) ? origin : ALLOWED[0],
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     };

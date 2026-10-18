@@ -1,12 +1,12 @@
-name: Daily Notification
+name: Billing Reminder
 
 on:
   schedule:
-    - cron: '1 17 * * *'  # 17:01 UTC = 00:01 WIB
+    - cron: '45 23 * * *'  # 23:45 UTC = 06:45 WIB (kirim terjadwal jam reminderTime WIB)
   workflow_dispatch:
     inputs:
       force:
-        description: 'Force send all active events (skip dedup, no notifSentDate update)'
+        description: 'Force kirim tanpa dedup & tanpa send_after (kirim langsung)'
         required: false
         default: 'false'
 
@@ -14,32 +14,126 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Send push notifications
+      - name: Send billing reminder
         env:
           ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
           ONESIGNAL_REST_KEY: ${{ secrets.ONESIGNAL_REST_KEY }}
           GIST_ID: ${{ secrets.GIST_ID }}
           GIST_PAT: ${{ secrets.GIST_PAT }}
+          VAULT_PASS: ${{ secrets.VAULT_PASS }}
           FORCE: ${{ github.event.inputs.force || 'false' }}
         run: |
           node << 'EOF'
-          const https = require('https');
+          const crypto = require('crypto');
 
-          async function req(method, url, headers, body) {
-            return new Promise((res, rej) => {
-              const data = body ? JSON.stringify(body) : null;
-              const u = new URL(url);
-              const r = https.request({
-                hostname: u.hostname, path: u.pathname + u.search, method,
-                headers: { ...headers, ...(data ? { 'Content-Type':'application/json','Content-Length':Buffer.byteLength(data) } : {}) }
-              }, resp => {
-                let d = ''; resp.on('data', c => d += c);
-                resp.on('end', () => { try { res(JSON.parse(d)); } catch { res(d); } });
-              });
-              r.on('error', rej);
-              if (data) r.write(data);
-              r.end();
+          const PBKDF2_ITER = 310000;
+          const CHECK_MAGIC = 'nyam-odoo-vault-v1';
+          const WIB = 'Asia/Jakarta';
+          const DAY_MS = 86400000;
+
+          async function req(method, url, headers, body){
+            const data = body ? JSON.stringify(body) : null;
+            const r = await fetch(url, {
+              method,
+              headers: { ...headers, ...(data ? { 'Content-Type': 'application/json' } : {}) },
+              body: data,
             });
+            const txt = await r.text();
+            let json = null;
+            try { json = JSON.parse(txt); } catch {}
+            if (!r.ok) throw new Error(`HTTP ${r.status}: ${(json && json.message) || txt.slice(0, 200)}`);
+            return json;
+          }
+
+          function decItem(key, ivB64, payloadB64){
+            const iv = Buffer.from(ivB64, 'base64');
+            const buf = Buffer.from(payloadB64, 'base64');
+            if (buf.length < 16) return null;
+            const tag = buf.subarray(buf.length - 16);
+            const ct = buf.subarray(0, buf.length - 16);
+            const d = crypto.createDecipheriv('aes-256-gcm', key, iv);
+            d.setAuthTag(tag);
+            return JSON.parse(Buffer.concat([d.update(ct), d.final()]).toString('utf8'));
+          }
+
+          function wibToday(){
+            return new Date().toLocaleDateString('en-CA', { timeZone: WIB });
+          }
+          function wibNow(){
+            return new Date(new Date().toLocaleString('en-US', { timeZone: WIB }));
+          }
+          function dateStrInWIB(d){
+            return d.toLocaleDateString('en-CA', { timeZone: WIB });
+          }
+          function daysBetween(fromStr, toStr){
+            const a = Date.parse(fromStr + 'T00:00:00Z');
+            const b = Date.parse(toStr + 'T00:00:00Z');
+            return Math.round((b - a) / DAY_MS);
+          }
+          const DAY_NAMES = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+          const MONTH_NAMES = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+          function dueLabel(dueStr, days){
+            const d = new Date(dueStr + 'T00:00:00Z');
+            const base = `${DAY_NAMES[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+            if (days === 0) return `${base} — hari ini`;
+            if (days === 1) return `${base} — besok`;
+            return `${base} — ${days} hari lagi`;
+          }
+          function hashKey(id, domain, due){
+            return crypto.createHash('sha256').update(`${id}|${domain}|${due}`).digest('hex').slice(0, 16);
+          }
+          function pad2(n){ return String(n).padStart(2, '0'); }
+          function parseYmd(s){
+            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
+            return m ? { y: +m[1], m: +m[2], d: +m[3] } : null;
+          }
+          function daysInMonth(y, m){
+            return new Date(Date.UTC(y, m, 0)).getUTCDate();
+          }
+          function nextOccurrence(b, todayStr){
+            const a = parseYmd(b.due);
+            if (!a) return null;
+            if (b.due >= todayStr) return b.due;
+            const t = parseYmd(todayStr);
+            if (b.freq === 'bulanan'){
+              let y = t.y, m = t.m;
+              let occ = `${y}-${pad2(m)}-${pad2(Math.min(a.d, daysInMonth(y, m)))}`;
+              if (occ < todayStr){
+                m++;
+                if (m > 12){ m = 1; y++; }
+                occ = `${y}-${pad2(m)}-${pad2(Math.min(a.d, daysInMonth(y, m)))}`;
+              }
+              return occ;
+            }
+            if (b.freq === 'tahunan'){
+              let occ = `${t.y}-${pad2(a.m)}-${pad2(Math.min(a.d, daysInMonth(t.y, a.m)))}`;
+              if (occ < todayStr) occ = `${t.y + 1}-${pad2(a.m)}-${pad2(Math.min(a.d, daysInMonth(t.y + 1, a.m)))}`;
+              return occ;
+            }
+            return b.due;
+          }
+          function formatNominal(s){
+            s = String(s ?? '').trim();
+            if (!s) return '';
+            let t = s.replace(/\s+/g, '');
+            let neg = false;
+            if (t[0] === '-'){ neg = true; t = t.slice(1); }
+            if (/^rp[\d.]+$/i.test(t)) t = t.slice(2);
+            else if (/^rp-[\d.]+$/i.test(t)){ neg = true; t = t.slice(3); }
+            if (/^\d+$/.test(t)){
+              const mag = BigInt(t);
+              return (neg && mag !== 0n ? 'Rp -' : 'Rp ') + mag.toLocaleString('id-ID');
+            }
+            if (/^\d{1,3}(\.\d{3})+$/.test(t)){
+              const mag = BigInt(t.replace(/\./g, ''));
+              return (neg && mag !== 0n ? 'Rp -' : 'Rp ') + mag.toLocaleString('id-ID');
+            }
+            return s;
+          }
+          function freqHint(freq){
+            if (freq === 'bulanan') return ' · ⟳ setiap bulan';
+            if (freq === 'tahunan') return ' · ⟳ setiap tahun';
+            return '';
           }
 
           (async () => {
@@ -47,134 +141,130 @@ jobs:
             const gistPat = process.env.GIST_PAT;
             const osAppId = process.env.ONESIGNAL_APP_ID;
             const osKey   = process.env.ONESIGNAL_REST_KEY;
+            const pass    = process.env.VAULT_PASS;
             const force   = process.env.FORCE === 'true';
-            const ghHdr   = { 'Authorization': `Bearer ${gistPat}`, 'Accept': 'application/vnd.github+json', 'User-Agent': 'alteco-notif' };
 
-            // Load Gist
+            if (!gistId || !gistPat){ console.error('GIST_ID / GIST_PAT belum diset'); process.exit(1); }
+            if (!osAppId || !osKey){ console.error('ONESIGNAL_APP_ID / ONESIGNAL_REST_KEY belum diset'); process.exit(1); }
+            if (!pass){ console.error('VAULT_PASS belum diset (isi dengan PASS_ADMIN vault)'); process.exit(1); }
+
+            const ghHdr = { 'Authorization': `Bearer ${gistPat}`, 'Accept': 'application/vnd.github+json', 'User-Agent': 'odoo-vault-cron' };
+
             const gist = await req('GET', `https://api.github.com/gists/${gistId}`, ghHdr);
             const content = gist.files?.['alteco-data.json']?.content;
-            if (!content) { console.log('No data'); process.exit(0); }
+            if (!content){ console.log('Gist kosong'); process.exit(0); }
             const db = JSON.parse(content);
 
-            if (!db.settings?.pushNotifEnabled) { console.log('Push disabled'); process.exit(0); }
+            const st = db.settings || {};
+            if (!st.pushNotifEnabled){ console.log('Push nonaktif (pushNotifEnabled=false)'); process.exit(0); }
+            if (!st.billingReminderEnabled){ console.log('Pengingat tagihan nonaktif (billingReminderEnabled=false)'); process.exit(0); }
 
-            // Today in WIB
-            const now   = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
-            const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
-            const dow   = now.getDay();
-            const dom   = now.getDate();
+            const daysBefore = Math.max(0, Math.min(30, Number(st.reminderDaysBefore ?? 3)));
+            const reminderTime = /^\d{2}:\d{2}$/.test(st.reminderTime || '') ? st.reminderTime : '07:00';
 
-            // notifTime for scheduled delivery
-            const notifTime = db.settings.notifTime || '07:00';
-            const [notifH, notifM] = notifTime.split(':').map(Number);
-            const sendAfter = `${today} ${String(notifH).padStart(2,'0')}:${String(notifM).padStart(2,'0')}:00 GMT+0700`;
+            if (!db.meta?.salt || !db.meta?.check){ console.error('meta.salt/check tidak ada — tidak bisa decrypt'); process.exit(1); }
 
-            const globalDaysBefore = db.settings.notifDaysBefore ?? 1;
+            const key = crypto.pbkdf2Sync(pass, Buffer.from(db.meta.salt, 'base64'), PBKDF2_ITER, 32, 'sha256');
+            let chk;
+            try { chk = decItem(key, db.meta.check.iv, db.meta.check.payload); }
+            catch (e){ console.error('meta.check gagal decrypt — VAULT_PASS salah atau vault rusak'); process.exit(1); }
+            if (chk?.m !== CHECK_MAGIC){ console.error('meta.check magic tidak cocok — VAULT_PASS salah'); process.exit(1); }
 
-            let qualifying;
+            const today = wibToday();
+            const nowWib = wibNow();
 
-            if (force) {
-              // Force: all active events regardless of notifSentDate
-              qualifying = (db.events || []).filter(ev => {
-                if (ev.type === 'once') return ev.date && ev.date >= today;
-                if (ev.type === 'recurring') return true;
-                return false;
-              });
-              console.log(`Force mode — ${qualifying.length} active events`);
-            } else {
-              // Normal daily: dedup + date qualification
-              qualifying = (db.events || []).filter(ev => {
-                if (ev.notifSentDate === today) return false;
+            const bills = [];
+            let unreadable = 0, legacy = 0;
+            for (const it of (db.projects || [])){
+              if (!it || it.deleted || !it.iv || !it.payload) continue;
+              let obj;
+              try { obj = decItem(key, it.iv, it.payload); }
+              catch { unreadable++; continue; }
+              if (!obj || obj.v !== 2){ legacy++; continue; }
+              for (const b of (obj.bills || [])){
+                if (!b || !b.domain || !/^\d{4}-\d{2}-\d{2}$/.test(b.due || '')) continue;
+                const occ = nextOccurrence(b, today);
+                if (!occ) continue;
+                const days = daysBetween(today, occ);
+                if (days < 0 || days > daysBefore) continue;
+                bills.push({ id: it.id, name: obj.name || '', domain: b.domain, nominal: b.nominal || '', freq: b.freq || 'once', due: occ, days, url: b.url || '' });
+              }
+            }
+            if (unreadable) console.log(`Peringatan: ${unreadable} item tidak terbaca (kunci berbeda)`);
+            if (legacy) console.log(`Info: ${legacy} item model lama dilewati`);
 
-                if (ev.type === 'once') {
-                  if (!ev.date) return false;
-                  const startDate = new Date(ev.date + 'T00:00:00');
-                  startDate.setDate(startDate.getDate() - globalDaysBefore);
-                  const startStr = startDate.toLocaleDateString('en-CA');
-                  return today >= startStr && today <= ev.date;
-                }
-
-                if (ev.type === 'recurring') {
-                  const base = ev.recurDate ? new Date(ev.recurDate + 'T00:00:00') : null;
-                  if (ev.recurrence === 'harian') return true;
-                  if (ev.recurrence === 'mingguan') return base ? dow === base.getDay() : dow === 1;
-                  if (ev.recurrence === 'bulanan')  return base ? dom === base.getDate() : dom === 1;
-                  if (ev.recurrence === 'tahunan')  return base ? (now.getMonth() === base.getMonth() && dom === base.getDate()) : false;
-                }
-                return false;
-              });
+            const log = (db.reminderLog && typeof db.reminderLog === 'object') ? { ...db.reminderLog } : {};
+            const pruneCutoff = dateStrInWIB(new Date(Date.now() - 45 * DAY_MS));
+            let logChanged = false;
+            for (const k of Object.keys(log)){
+              if (typeof log[k] !== 'string' || log[k] < pruneCutoff){ delete log[k]; logChanged = true; }
             }
 
-            if (!qualifying.length) { console.log('No qualifying events today'); process.exit(0); }
+            let qualifying = bills;
+            if (!force){
+              qualifying = bills.filter(b => !log[hashKey(b.id, b.domain, b.due)]);
+            }
+            console.log(`Bills dalam window: ${bills.length}, lolos dedup: ${qualifying.length}`);
 
-            // Build bundled notification content
-            const DAY_NAMES   = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
-            const MONTH_NAMES = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
-            const REC_LABELS  = { harian:'setiap hari', mingguan:'setiap minggu', bulanan:'setiap bulan', tahunan:'setiap tahun' };
-
-            const orgName = db.orgName || 'Alteco';
-
-            function timeLabel(ev) {
-              if (ev.type === 'recurring') return REC_LABELS[ev.recurrence] || 'berulang';
-              if (ev.date === today) return 'Hari ini';
-              const diff = Math.round((new Date(ev.date) - new Date(today)) / 86400000);
-              const d = new Date(ev.date + 'T00:00:00');
-              return `${diff} hari lagi · ${DAY_NAMES[d.getDay()]}, ${d.getDate()} ${MONTH_NAMES[d.getMonth()]}`;
+            if (!qualifying.length){
+              if (logChanged){
+                db.reminderLog = log;
+                await req('PATCH', `https://api.github.com/gists/${gistId}`, ghHdr,
+                  { files: { 'alteco-data.json': { content: JSON.stringify(db) } } });
+                console.log('Reminder log di-prune');
+              }
+              process.exit(0);
             }
 
+            const orgName = db.orgName || 'Odoo Vault';
             let heading, bodyText;
-            if (qualifying.length === 1) {
-              const ev = qualifying[0];
-              heading = `📌 ${orgName}`;
-              bodyText = `${ev.title}\n📅 ${timeLabel(ev)}` + (ev.description?.trim() ? `\n${ev.description.trim()}` : '');
-            } else {
-              heading = `📌 ${orgName} — ${qualifying.length} Pengumuman`;
-              bodyText = qualifying.map(ev => {
-                let line = `• ${ev.title} — ${timeLabel(ev)}`;
-                if (ev.description?.trim()) line += `\n  ${ev.description.trim()}`;
-                return line;
-              }).join('\n');
+            if (qualifying.length === 1){
+              const b = qualifying[0];
+              heading = `💸 ${orgName} — Tagihan`;
+              bodyText = `${b.domain}${b.nominal ? ` — ${formatNominal(b.nominal)}` : ''}${freqHint(b.freq)}\n📅 Jatuh tempo: ${dueLabel(b.due, b.days)}`;
+            }else{
+              heading = `💸 ${orgName} — ${qualifying.length} Tagihan`;
+              bodyText = qualifying.map(b =>
+                `• ${b.domain}${b.nominal ? ` — ${formatNominal(b.nominal)}` : ''}${freqHint(b.freq)}\n  📅 ${dueLabel(b.due, b.days)}`
+              ).join('\n');
             }
 
-            console.log('Sending:', heading);
-            console.log(bodyText);
-
-            const notifPayload = {
+            const payload = {
               app_id: osAppId,
               included_segments: ['All'],
-              headings:  { en: heading, id: heading },
-              contents:  { en: bodyText, id: bodyText },
-              url: 'https://dionisiusnp.github.io/todolist/'
+              headings: { en: heading, id: heading },
+              contents: { en: bodyText, id: bodyText },
+              url: 'https://mrafiafif05.github.io/',
             };
-            // send_after only for scheduled daily run, not force
-            if (!force) notifPayload.send_after = sendAfter;
+
+            let sendAfter = null;
+            if (!force){
+              const [h, m] = reminderTime.split(':').map(Number);
+              const sendDate = new Date(Date.UTC(nowWib.getUTCFullYear(), nowWib.getUTCMonth(), nowWib.getUTCDate(), h, m, 0));
+              if (sendDate.getTime() - Date.now() < 60000){
+                // jam kirim sudah lewat — kirim langsung tanpa send_after
+                console.log(`Jam kirim ${reminderTime} WIB sudah lewat — kirim langsung`);
+              }else{
+                sendAfter = `${today} ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00 GMT+0700`;
+              }
+            }
+            if (sendAfter) payload.send_after = sendAfter;
 
             const osResult = await req('POST', 'https://onesignal.com/api/v1/notifications',
-              { 'Authorization': `Key ${osKey}` },
-              notifPayload
-            );
-            console.log('OneSignal response:', JSON.stringify(osResult));
-            if (osResult.errors) {
-              console.error('OneSignal ERROR:', JSON.stringify(osResult.errors));
-              process.exit(1);
-            }
-            if (!osResult.id) {
-              console.error('OneSignal: no notification ID returned — possible auth or config issue');
-              process.exit(1);
-            }
-            console.log('OneSignal notification ID:', osResult.id, '| recipients:', osResult.recipients);
+              { 'Authorization': `Key ${osKey}` }, payload);
+            console.log('OneSignal:', JSON.stringify(osResult));
+            if (osResult.errors){ console.error('OneSignal ERROR:', JSON.stringify(osResult.errors)); process.exit(1); }
+            if (!osResult.id){ console.error('OneSignal: tidak ada ID — cek auth/config'); process.exit(1); }
+            console.log('ID:', osResult.id, '| recipients:', osResult.recipients, sendAfter ? `| send_after: ${sendAfter}` : '| immediate');
 
-            // Mark sent — only for normal daily run
-            if (!force) {
-              db.events = db.events.map(ev =>
-                qualifying.find(q => q.id === ev.id) ? { ...ev, notifSentDate: today } : ev
-              );
+            if (!force){
+              for (const b of qualifying) log[hashKey(b.id, b.domain, b.due)] = today;
+              db.reminderLog = log;
               await req('PATCH', `https://api.github.com/gists/${gistId}`, ghHdr,
-                { files: { 'alteco-data.json': { content: JSON.stringify(db) } } }
-              );
-              console.log(`Done — scheduled for ${sendAfter}`);
-            } else {
-              console.log('Done — force sent immediately (notifSentDate unchanged)');
+                { files: { 'alteco-data.json': { content: JSON.stringify(db) } } });
+              console.log(`Done — ${qualifying.length} tagihan ditandai terkirim`);
+            }else{
+              console.log('Done — force, reminderLog tidak diubah');
             }
-          })();
+          })().catch(e => { console.error(e); process.exit(1); });
           EOF

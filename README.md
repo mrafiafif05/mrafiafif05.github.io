@@ -1,6 +1,19 @@
-# Rak Perpustakaan
+# Odoo Vault
 
-Portal multi-halaman berisi alat kerja tim + **Kelola Alteco** — aplikasi manajemen organisasi berbasis web (single-file, GitHub Pages, tanpa server).
+Aplikasi web single-file untuk **menyimpan kredensial database Odoo per project** — terenkripsi di browser sebelum disinkronkan ke GitHub Gist lewat Cloudflare Worker. Tanpa server backend, tanpa build tool: vanilla HTML + Web Crypto API.
+
+---
+
+## Fitur
+
+- **Enkripsi klien** — semua field (master password, password DB, email, phone, dll.) dienkripsi AES-GCM-256 dengan kunci dari PBKDF2 (310k iterasi) sebelum meninggalkan browser. Gist/localStorage hanya berisi blob terenkripsi.
+- **Model per project (`v:2`)** — nama project sebagai judul kartu; dalam kartu: identitas & field master (host, GitHub, go-live, **pitchdeck**, email, password email, phone, **PIC**), accordion Overview/Plan, catatan, lalu **segmented tab** berisi **General Key** (baris datar key/value — nama db = key, master password Odoo = value; **＋ Tambah** & editor inline per baris) dan **Tagihan** (nama layanan + harga — format **Rp otomatis**, boleh **negatif** untuk refund/kredit — lalu badge jatuh tempo, ✎ edit / 🗑 hapus per baris). Pilihan tab diingat **per project** (default General Key). Tagihan = **3 field**, jatuh tempo = **radio periode** yang mengisi datepicker **dari tanggal awal** (nilai datepicker saat dibuka / hasil edit manual; radio yang sudah aktif tidak mengubah tanggal) saat diklik: **Sekali bayar +0** = kembali ke tanggal awal (datepicker bebas, boleh lampau), **Bulanan +30 hari**, **Tahunan +365 hari** — datepicker selalu editable; pengulangan tagihan tetap per kalender (anchor tempo), chip ⟳ tampil untuk tagihan berulang.
+- **Dua peran** — `PASS_ADMIN` (lihat + tambah/edit/hapus + kirim notif uji), `PASS_VIEW` (lihat & copy saja).
+- **Sinkron multi-device** — localStorage (instan) + Cloudflare Worker read-merge-write ke Gist (anti data-hilang saat edit bersamaan), soft-delete tombstone.
+- **Sesi unlock** — tetap terbuka selama tab aktif (termasuk setelah refresh); tutup tab = login lagi. Lock manual dengan ikon 🔒.
+- **Push notif siaga** — toggle subscribe OneSignal + tombol "Kirim notif uji" (admin).
+- **Pengingat tagihan harian** — cron GitHub Actions meng-decrypt data di workflow lalu kirim push via OneSignal maksimal **1× per tagihan** dalam jendela N hari sebelum jatuh tempo (atur toggle/N hari/jam kirim di panel 🔔).
+- Dark/light theme, search, copy-to-clipboard per field.
 
 ---
 
@@ -8,296 +21,133 @@ Portal multi-halaman berisi alat kerja tim + **Kelola Alteco** — aplikasi mana
 
 ```
 /
-├── index.html              ← Homepage (nav ke semua rak)
-├── proyekan/index.html     ← Referensi command & AI tools
-├── pengajar/index.html     ← Sektor industri + modul ERP
-├── pemasaran/index.html    ← Siklus penawaran
-├── mitra/index.html        ← Logo & info mitra
-├── todolist/index.html     ← Kelola Alteco (app utama)
-├── OneSignalSDKWorker.js   ← Service worker push notif
+├── index.html              ← Seluruh aplikasi (UI + crypto + sync)
+├── 404.html                ← Halaman 404 (Firebase Hosting)
+├── OneSignalSDKWorker.js   ← Service worker push OneSignal
+├── WORKER.md               ← Kode & dokumentasi Cloudflare Worker
 └── .github/workflows/
-    └── daily-notif.yml     ← Cron harian kirim push notif
+    └── daily-notif.yml     ← Cron harian: pengingat tagihan (decrypt → dedup → OneSignal)
 ```
 
 ---
 
-## Fork & Deploy ke Repo Baru
+## Deploy
 
-### 1. Fork / Clone
+### 1. GitHub Pages
 
-```bash
-git clone https://github.com/dionisiusnp/dionisiusnp.github.io.git
-cd dionisiusnp.github.io
-```
+Repo → **Settings → Pages → Source: Deploy from branch → branch: main → / (root)**
+Situs live di `https://<username>.github.io`.
 
-Atau fork via GitHub UI → rename repo sesuai username: `<username>.github.io`
+### 2. GitHub Gist (penyimpanan data)
 
-### 2. Aktifkan GitHub Pages
-
-GitHub → repo → **Settings → Pages → Source: Deploy from branch → branch: main → / (root)**
-
-Situs live di: `https://<username>.github.io`
-
----
-
-## Setup Layanan Eksternal
-
-Kelola Alteco butuh 4 layanan eksternal: **GitHub Gist** (data), **Cloudflare Workers** (write proxy), **OneSignal** (push notif), dan **GitHub Actions** (cron). Firebase Hosting opsional sebagai alternatif GitHub Pages.
-
----
-
-## A — GitHub Gist (Penyimpanan Data)
-
-Data organisasi disimpan di Gist agar semua device dapat data terbaru tanpa backend server.
-
-### A1. Buat Gist
-
-1. Buka [gist.github.com](https://gist.github.com)
-2. Isi:
-   - **Description**: nama organisasimu
-   - **Filename**: `alteco-data.json`
-   - **Content**:
-     ```json
-     {"kelompoks":[],"members":[],"tasks":[],"assets":[],"events":[],"projects":[],"cultures":[],"regulasi":{"visi":"","misi":"","syaratAnggota":[],"syaratTim":[],"sanksi":[]},"orgName":"Nama Organisasi","settings":{"pushNotifEnabled":false,"notifTime":"07:00","notifDaysBefore":1,"writePat":""}}
-     ```
-3. Klik **Create secret gist**
-4. Salin **Gist ID** dari URL:
+1. Buat Gist baru di [gist.github.com](https://gist.github.com) — filename `alteco-data.json`, content:
+   ```json
+   {"projects":[],"meta":null,"orgName":"Odoo Vault","settings":{"pushNotifEnabled":false,"billingReminderEnabled":false,"reminderDaysBefore":3,"reminderTime":"07:00"}}
    ```
-   https://gist.github.com/<username>/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2. **Create secret gist** → salin **Gist ID** dari URL.
+3. Pasang ke `index.html`:
+   ```javascript
+   const GIST_ID    = 'GIST_ID_DISINI';
+   const WORKER_URL = 'WORKER_URL_DISINI';
    ```
 
-### A2. Buat GitHub Personal Access Token (PAT)
+### 3. GitHub PAT
 
-PAT dibutuhkan untuk dua keperluan: Cloudflare Worker secret (agar app bisa tulis ke Gist) dan GitHub Actions secret (agar cron harian bisa baca/tulis Gist).
+1. [github.com/settings/tokens](https://github.com/settings/tokens) → **Generate new token (classic)** → scope centang **`gist`** saja.
+2. Simpan token (hanya tampil sekali). **Jangan** taruh di kode/browser — hanya di Worker secret & GitHub Actions secret.
 
-1. Buka [github.com/settings/tokens](https://github.com/settings/tokens)
-2. **Generate new token (classic)**
-3. Isi:
-   - **Note**: `kelola-gist`
-   - **Expiration**: No expiration
-   - **Scope**: centang `gist` saja
-4. Generate → **salin token sekarang** (hanya tampil sekali)
+### 4. Cloudflare Worker (write proxy)
 
-> PAT **jangan** ditaruh di kode atau browser. Disimpan di Cloudflare Worker secret dan GitHub Actions secret saja (lihat E dan D).
+Kode lengkap ada di [`WORKER.md`](WORKER.md). Ringkas:
 
-### A3. Pasang Gist ID ke Kode
+1. [workers.cloudflare.com](https://workers.cloudflare.com) → **Create Worker** (mis. `alteco-writer`).
+2. Edit code → paste kode dari `WORKER.md` → pastikan daftar `ALLOWED` di kode CORS berisi domain GitHub Pages-mu (dan `http://localhost` bila perlu testing lokal).
+3. Tambah 4 secrets: `GIST_ID`, `GIST_PAT`, `ONESIGNAL_APP_ID`, `ONESIGNAL_REST_KEY`.
+4. Deploy → salin URL worker (`https://alteco-writer.<subdomain>.workers.dev`) → pasang ke `WORKER_URL` di `index.html`.
 
-Buka `todolist/index.html`, baris ~596:
+### 5. OneSignal (push notif)
 
-```javascript
-const GIST_ID   = 'GIST_ID_DISINI';
-const WORKER_URL= 'WORKER_URL_DISINI';
-```
+1. [onesignal.com](https://onesignal.com) → **New App** → platform **Web** → Integration **Custom Code** → Site URL = domain GitHub Pages-mu.
+2. Ambil **App ID** (Settings → Keys & IDs) → pasang ke `ONESIGNAL_APP_ID` di `index.html`.
+3. File `OneSignalSDKWorker.js` di root sudah siap (scope root, tidak perlu diubah).
 
-Ganti `GIST_ID` dengan Gist ID dari A1. `WORKER_URL` diisi setelah setup Cloudflare Worker (langkah E). Commit & push.
+### 6. GitHub Actions (pengingat tagihan)
 
----
+Workflow `.github/workflows/daily-notif.yml` jalan tiap hari pukul **06:45 WIB** (schedule `45 23 * * *`):
 
-## B — OneSignal (Push Notification)
+1. Ambil Gist → **decrypt di workflow** dengan `VAULT_PASS` (PBKDF2 310k + AES-GCM, sama dengan app) → cek `meta.check`.
+2. Untuk tiap bill: hitung **jatuh tempo berikutnya** (`nextOccurrence` — `due` yang **masih ≥ hari ini dipakai apa adanya**; `once` lampau = `due`; `bulanan` lampau = hari `due` di bulan berikutnya, clamp akhir bulan; `tahunan` lampau = tanggal/bulan `due` tahun berikutnya) lalu kumpulkan yang `0 ≤ (jatuh tempo berikutnya − hari ini) ≤ reminderDaysBefore` (default 3).
+3. Dedup via **`reminderLog` top-level** di Gist (bukan di `settings` — sengaja di luar supaya tidak tertimpa save browser; key = hash `id|domain|<tanggal occurrence>`) — **maksimal 1 notif per tagihan per periode** (bulanan = 1×/bulan, tahunan = 1×/tahun); entri >45 hari di-prune. Bill `once` tanpa field `freq` berperilaku persis sebelumnya (key dedup lama tetap sah).
+4. Kirim OneSignal (bundle bila >1 tagihan; isi nominal diformat `Rp 150.000` — termasuk negatif `Rp -5.000` — + hint `⟳ setiap bulan/tahun`) dengan `send_after` = `reminderTime` WIB, lalu PATCH Gist menandai sudah terkirim.
 
-### B1. Daftar & Buat App
-
-1. Buka [onesignal.com](https://onesignal.com) → daftar akun gratis
-2. **New App** → beri nama → pilih platform **Web**
-3. Setup Web:
-   - **Integration**: `Custom Code`
-   - **Site URL**: `https://<username>.github.io` (atau domain Firebase jika pakai hosting Firebase)
-   - **Default Icon URL**: URL ikon organisasimu (opsional)
-4. Selesaikan wizard
-
-### B2. Ambil Credentials
-
-Di dashboard OneSignal → **Settings → Keys & IDs**:
-
-| Key | Format |
-|-----|--------|
-| **App ID** | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
-| **REST API Key** | `os_v2_...` |
-
-### B3. Pasang App ID ke Kode
-
-Buka `todolist/index.html`, baris ~593:
-
-```javascript
-const ONESIGNAL_APP_ID = 'ONESIGNAL_APP_ID_DISINI';
-```
-
-Ganti dengan App ID dari B2. Commit & push.
-
-### B4. Service Worker
-
-File `OneSignalSDKWorker.js` di root repo sudah siap — tidak perlu diubah:
-
-```javascript
-importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
-```
-
-> **iOS Safari**: Push notif web hanya berfungsi jika situs di-*Add to Home Screen* dan iOS ≥ 16.4.
+Wajib 5 repository secrets: `GIST_ID`, `GIST_PAT`, `ONESIGNAL_APP_ID`, `ONESIGNAL_REST_KEY`, **`VAULT_PASS`** (isi nilai `PASS_ADMIN`). Tanpa `VAULT_PASS` workflow error agar tidak mengirim sembarangan. Bisa dijalankan manual via **workflow_dispatch** dengan input `force=true` (kirim ulang tanpa dedup). Notifikasi hanya keluar bila `pushNotifEnabled` **dan** `billingReminderEnabled` aktif (dua-duanya diatur dari panel 🔔).
 
 ---
 
-## C — Firebase Hosting (Opsional — Alternatif GitHub Pages)
+## Cara Pakai
 
-Gunakan jika butuh custom domain lebih mudah atau ingin deploy di luar GitHub Pages.
+1. Buka situs → masukkan **password** (`PASS_ADMIN` untuk admin, `PASS_VIEW` untuk viewer).
+2. Vault kosong terbentuk otomatis pada kunjungan pertama — klik **＋ Tambah** untuk menyimpan project Odoo pertama.
+3. Isi form: nama project (wajib), host/GitHub/go-live/pitchdeck (link — baru bisa diklik bila diawali `https://`), overview/plan (teks, bisa dilipat di kartu), email + password email + phone + **PIC**, lalu catatan. **General Key** dan **Tagihan** tidak diisi lewat form — kelola lewat **tab** di dalam kartu (tab diingat **per project**, default General Key): **＋ Tambah** / **✎** / **🗑** per baris; tagihan = 3 field — nama layanan (wajib), harga (format **Rp otomatis**, **boleh negatif** untuk refund/kredit), dan jatuh tempo berupa **radio periode** yang **mengisi datepicker dari tanggal awal** (tersimpan saat dibuka / hasil edit manual; radio yang sudah aktif tidak mengubah tanggal) — **Sekali bayar +0** kembali ke tanggal awal (datepicker bebas, boleh lampau), **Bulanan +30 hari**, **Tahunan +365 hari** — datepicker tetap bebas diedit; pengulangan tetap per kalender dari anchor tempo).
+4. **Sesi**: setelah unlock, sesi disimpan per-tab (`sessionStorage`) — refresh tetap masuk otomatis; **tutup tab** atau klik **🔒 Lock** untuk keluar.
 
-### C1. Buat Project Firebase
+### Ubah password
 
-1. Buka [console.firebase.google.com](https://console.firebase.google.com)
-2. **Add project** → beri nama → (opsional) nonaktifkan Google Analytics
-3. Tunggu project dibuat
-
-### C2. Install Firebase CLI
-
-```bash
-npm install -g firebase-tools
-firebase login
-```
-
-### C3. Init Hosting
-
-Di root repo:
-
-```bash
-firebase init hosting
-```
-
-Pilih:
-- **Project**: pilih project yang dibuat di C1
-- **Public directory**: `.` (root — karena `index.html` ada di root)
-- **Single-page app**: `No`
-- **GitHub automatic deploys**: opsional
-
-Firebase akan membuat `firebase.json` dan `.firebaserc`.
-
-### C4. Konfigurasi `firebase.json`
-
-```json
-{
-  "hosting": {
-    "public": ".",
-    "ignore": ["firebase.json", ".firebaserc", ".git/**", "README.md"],
-    "headers": [
-      {
-        "source": "/OneSignalSDKWorker.js",
-        "headers": [{ "key": "Service-Worker-Allowed", "value": "/" }]
-      }
-    ]
-  }
-}
-```
-
-> Header `Service-Worker-Allowed` wajib agar OneSignal service worker bisa berjalan dari root scope.
-
-### C5. Deploy
-
-```bash
-firebase deploy --only hosting
-```
-
-Situs live di: `https://<project-id>.web.app`
-
-Update **Site URL** di OneSignal (B1) ke domain Firebase ini.
-
----
-
-## D — GitHub Actions (Cron Notifikasi Harian)
-
-Workflow di `.github/workflows/daily-notif.yml` mengirim push notif setiap hari pukul 00:01 WIB.
-
-### D1. Pasang Repository Secrets
-
-GitHub → repo → **Settings → Secrets and variables → Actions → New repository secret**:
-
-| Secret | Nilai | Dari |
-|--------|-------|------|
-| `GIST_ID` | Gist ID | Langkah A1 |
-| `GIST_PAT` | GitHub PAT | Langkah A2 |
-| `ONESIGNAL_APP_ID` | OneSignal App ID | Langkah B2 |
-| `ONESIGNAL_REST_KEY` | OneSignal REST API Key | Langkah B2 |
-
-### D2. Aktifkan Push Notification di App
-
-1. Buka app → login admin
-2. **Pengaturan** → aktifkan **Push Notification**
-3. Set **Waktu Kirim** (default 07:00 WIB)
-4. Set **Notif Mulai H-** (berapa hari sebelum acara mulai notif dikirim)
-5. Simpan
-
-### D3. Trigger Manual
-
-GitHub → **Actions → Daily Notification → Run workflow**
-
-Centang `Force send` untuk kirim ulang semua acara aktif tanpa update `notifSentDate`.
-
----
-
-## E — Cloudflare Workers (Write Proxy)
-
-Semua perubahan data (admin maupun viewer) dikirim ke Cloudflare Worker. Worker melakukan **read-merge-write** ke Gist — mencegah data hilang saat dua user edit bersamaan. Worker juga proxy push notification OneSignal.
-
-> **Kode lengkap Worker ada di [`todolist/WORKER.md`](todolist/WORKER.md)**
-
-### E1. Buat Worker
-
-1. Buka [workers.cloudflare.com](https://workers.cloudflare.com) → daftar akun gratis
-2. Dashboard → **Workers & Pages → Create application → Create Worker**
-3. Beri nama worker (contoh: `alteco-writer`) → **Deploy**
-4. Klik **Edit code** → hapus isi default → paste kode dari `todolist/WORKER.md` (bagian **Kode Worker**)
-5. Ganti `https://dionisiusnp.github.io` di baris `Access-Control-Allow-Origin` dengan domain GitHub Pages-mu
-6. Klik **Deploy**
-
-### E2. Tambah Secrets ke Worker
-
-Worker settings → **Settings → Variables and Secrets → Add**:
-
-| Secret | Nilai | Dari |
-|--------|-------|------|
-| `GIST_ID` | Gist ID | Langkah A1 |
-| `GIST_PAT` | PAT | Langkah A2 |
-| `ONESIGNAL_APP_ID` | OneSignal App ID | Langkah B2 |
-| `ONESIGNAL_REST_KEY` | OneSignal REST API Key | Langkah B2 |
-
-Klik **Encrypt** lalu **Save** untuk tiap secret.
-
-### E3. Salin URL Worker & Pasang ke Kode
-
-URL worker tampil di halaman Worker (format: `https://<name>.<subdomain>.workers.dev`).
-
-Buka `todolist/index.html`, baris ~598:
-
+Password role ada di `index.html`:
 ```javascript
-const WORKER_URL= 'https://<name>.<subdomain>.workers.dev';
+const PASS_ADMIN = '19950328';
+const PASS_VIEW  = '20251208';
 ```
-
-Ganti dengan URL Worker-mu. Commit & push.
-
----
-
-## F — Konfigurasi Kode Akses
-
-Password login ada di `todolist/index.html`, baris ~589:
-
-```javascript
-const PASS_VIEW  = 'GANTI_KODE_VIEWER';   // akses baca semua data
-const PASS_ADMIN = 'GANTI_KODE_ADMIN';    // akses penuh + CRUD
-```
-
 Ganti sesuai kebutuhan, commit & push.
 
-> Ini bukan auth yang aman untuk data sensitif — cukup untuk use case internal komunitas.
+> **Penting**: kunci enkripsi vault diturunkan dari `PASS_ADMIN`. Jika mengubah `PASS_ADMIN`, data lama tidak bisa didekripsi lagi — backup Gist dulu, atau re-encrypt manual.
 
 ---
 
-## Ringkasan Checklist Deploy
+## Model Keamanan (baca ini)
 
-- [ ] Fork repo & aktifkan GitHub Pages (atau setup Firebase Hosting)
-- [ ] Buat GitHub Gist dengan content awal (lihat A1) → salin Gist ID
-- [ ] Buat GitHub PAT classic (scope: `gist`) → simpan, hanya tampil sekali
-- [ ] Pasang `GIST_ID` ke `todolist/index.html`
-- [ ] Daftar Cloudflare → buat Worker → paste kode dari `todolist/WORKER.md` → set 4 secrets
-- [ ] Salin URL Worker → pasang ke `WORKER_URL` di `todolist/index.html`
-- [ ] Daftar OneSignal → pasang `ONESIGNAL_APP_ID` ke `todolist/index.html`
-- [ ] Commit & push
-- [ ] Pasang 4 secrets ke GitHub Actions (`GIST_ID`, `GIST_PAT`, `ONESIGNAL_APP_ID`, `ONESIGNAL_REST_KEY`)
-- [ ] Buka app → login admin → aktifkan push notif di Pengaturan
+| Aspek | Detail |
+|-------|--------|
+| Enkripsi | AES-GCM-256; key = PBKDF2-SHA256(`PASS_ADMIN`, salt acak 16B, 310k iterasi) |
+| Yang plaintext di Gist | Hanya `id`, `updatedAt`, `deleted`, `iv`, `meta.salt` (dibutuhkan merge & unlock) |
+| Yang terenkripsi | Semua field project (model `v:2`): nama, host, github, goLive, pitchdeck, overview, plan, email, emailPassword, phone, pic, `dbs[]` (key/value — dinormalisasi dari bentuk lama dbName/masterPass saat dibuka), `bills[]` (domain/nominal/freq/due/url), notes |
+| Kunci | Hidup di memori JS selama sesi unlock; tidak pernah ditulis ke localStorage/Gist |
+| Sesi unlock | Disimpan di `sessionStorage` (per-tab, hilang saat tab ditutup) agar refresh tidak perlu login ulang; tombol Lock menghapusnya |
+| Validasi password | `meta.check` — blob terenkripsi berisi magic string; gagal decrypt = "vault rusak" |
+| Batasan jujur | Source code repo publik ⇒ pembaca source + Gist ID **bisa** menurunkan kunci sendiri. Enkripsi ini melindungi dari pembaca Gist kasual, penyimpanan lokal browser, dan file backup — sesuai threat model komunitas internal. Untuk proteksi lebih kuat: gunakan master password rahasia yang tidak di-commit, atau pindah ke storage ber-auth (Worker + KV/D1). |
+
+---
+
+## Troubleshooting
+
+| Gejala | Penyebab / solusi |
+|--------|-------------------|
+| "Butuh koneksi aman" | Web Crypto butuh HTTPS/localhost — jangan akses via IP LAN |
+| Banner "Gagal tersinkron" | Worker down / CORS origin belum diperbarui di kode Worker → cek daftar `ALLOWED` (harus memuat origin halaman, tanpa trailing slash) |
+| List beda antar browser | Save gagal (CORS) sehingga tiap browser hanya punya cache lokal → perbaiki CORS Worker lalu **hard refresh** kedua browser. Item dari vault lama otomatis di-re-key ke vault server saat unlock |
+| Banner "Vault lokal berbeda dari server" | Pernah ada dua vault dengan salt berbeda — item lokal otomatis dipindahkan (re-key) ke vault server saat unlock. Jika muncul "N item tidak terbaca", item itu dibuat dengan kunci yang sudah tidak tersedia di perangkat ini |
+| "Vault rusak" | `meta.check` gagal didekripsi — salt/check di Gist tidak cocok (jangan timpa Gist; pulihkan dari backup) |
+| Selalu minta login saat refresh | Seharusnya tidak terjadi — sesi ada di `sessionStorage`. Cek apakah browser memblokir storage (mode incognito tertentu) |
+| Notif uji gagal | Cek 4 secrets Worker (`ONESIGNAL_*`, `GIST_*`) dan CORS |
+| Pengingat tagihan tidak masuk | Cek 5 secrets Actions (termasuk `VAULT_PASS`), status workflow di tab Actions, dan kedua toggle di panel 🔔 (`pushNotifEnabled` + `billingReminderEnabled`) |
+| Project lama (model sebelum revisi) tidak tampil | Sengaja — hanya item `v:2` yang dibaca ("Mulai baru"); data lama masih utuh terenkripsi di Gist. Bila perlu, salin isinya manual: identitas lewat form Tambah, isi tab General Key / Tagihan lewat tombol **＋** di kartu |
+| Data lama Kelola Alteco masih menempel di Gist | Aman — item lama tidak punya `iv`/`payload`, difilter dari tampilan. Kosongkan file Gist manual jika ingin bersih |
+
+---
+
+## Sinkronisasi Antar Browser
+
+Agar list sama di beberapa browser (mis. VS Code browser & Chrome):
+
+1. **Perbaiki CORS Worker sekali** — paste kode dari `WORKER.md` (daftar `ALLOWED` sudah memuat `https://mrafiafif05.github.io` + `http://localhost*`) lalu Deploy.
+2. **Hard refresh** (`Ctrl+Shift+R`) kedua browser agar memakai kode terbaru.
+3. Unlock di masing-masing browser — jika perangkat punya vault lokal dengan salt berbeda, app **otomatis memindahkan (re-key) item lokal ke vault server** dan menyinkronkannya. Banner akan memberi tahu hasilnya.
+4. Setelah itu list menyatu (union) di semua browser. Bila ada duplikat (item yang sempat dibuat terpisah di dua perangkat), hapus salah satu lewat tombol 🗑.
+
+> Jika muncul "N item tidak terbaca" — item itu dibuat oleh vault dengan kunci yang tidak tersedia di perangkat tersebut; salin ulang datanya manual lewat form Tambah (identitas) dan tombol **＋** di tab General Key / Tagihan.
+
+---
+
+## Backup
+
+Data = Gist `alteco-data.json` (terenkripsi) + salt di dalamnya. Untuk backup penuh: unduh isi Gist secara berkala dan simpan di tempat aman. Tanpa `meta.salt`, backup blob tidak bisa dibuka.

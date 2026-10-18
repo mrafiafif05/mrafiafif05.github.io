@@ -1,106 +1,2197 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Rak Perpustakaan</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Odoo Vault — Kredensial Database</title>
+<meta name="description" content="Penyimpan terenkripsi kredensial database Odoo per project.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0b0b12;--surface:#12121c;--card:#181825;--bd:#23233a;--text:#e2e2f0;--muted:#9494b8;--accent:#6c6ff5;--font:'Inter',system-ui,sans-serif}
-[data-theme="light"]{--bg:#f4f4f9;--surface:#eaeaef;--card:#dfdfec;--bd:#c5c5d4;--text:#15152a;--muted:#6a6a88;--accent:#5356d1}
-html{scroll-behavior:smooth}
-body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;display:flex;flex-direction:column;transition:background .25s,color .25s}
+:root{
+  --bg:#0b0b12;--surface:#12121c;--card:#181825;--bd:#23233a;
+  --text:#e2e2f0;--muted:#9494b8;--dim:#5c5c7a;
+  --accent:#6c6ff5;--accent2:#a78bfa;
+  --green:#34d399;--red:#f87171;--gold:#fbbf24;--blue:#60a5fa;
+  --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+}
+[data-theme="light"]{
+  --bg:#f4f4f9;--surface:#eaeaef;--card:#dfdfec;--bd:#c5c5d4;
+  --text:#15152a;--muted:#6a6a88;--dim:#9090aa;
+  --accent:#5356d1;--accent2:#8b5cf6;
+  --green:#059669;--red:#dc2626;--gold:#ca8a04;--blue:#2563eb;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text);display:flex;flex-direction:column;transition:background .25s,color .25s}
+input,button,select,textarea{font-family:var(--font);color:var(--text)}
+button{cursor:pointer;background:none;border:none}
 a{text-decoration:none;color:inherit}
+.mono{font-family:var(--mono)}
 
-.nav{display:flex;align-items:center;gap:10px;padding:10px 28px;background:var(--surface);border-bottom:1px solid var(--bd);transition:background .25s,border-color .25s}
-.nav-title{font-size:.82rem;font-weight:700}
-.nav-spacer{flex:1}
-.theme-btn{width:30px;height:30px;border-radius:6px;border:1px solid var(--bd);background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,border-color .2s;font-size:14px;line-height:1}
-.theme-btn:hover{background:var(--accent);border-color:var(--accent)}
+#secureError{position:fixed;inset:0;z-index:400;background:var(--bg);display:none;align-items:center;justify-content:center;padding:24px}
+#secureError.on{display:flex}
+.secure-box{background:var(--surface);border:1px solid var(--bd);border-radius:12px;padding:36px;max-width:420px;text-align:center}
+.secure-box h1{font-size:1.1rem;margin-bottom:12px;color:var(--red)}
+.secure-box p{font-size:.85rem;color:var(--muted);line-height:1.6}
 
-.hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 24px;text-align:center}
-.hero h1{font-size:clamp(1.6rem,4vw,2.6rem);font-weight:800;letter-spacing:-.02em;margin-bottom:10px}
-.hero>p{font-size:.9rem;color:var(--muted);max-width:480px;margin:0 auto 40px;transition:color .25s}
+#lock{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;transition:background .25s}
+#lock.hidden{display:none}
+#splash{position:fixed;inset:0;z-index:190;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;transition:opacity .25s}
+#splash.off{opacity:0;pointer-events:none}
+#splash .ring{width:32px;height:32px;border:3px solid var(--bd);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#splash p{font-size:.75rem;color:var(--muted)}
+.lock-box{background:var(--surface);border:1px solid var(--bd);border-radius:12px;padding:40px 36px;max-width:340px;width:100%;text-align:center}
+.lock-ico{font-size:2rem;margin-bottom:14px}
+.lock-title{font-size:1.2rem;font-weight:900;letter-spacing:-.03em;margin-bottom:4px}
+.lock-sub{font-size:.72rem;color:var(--muted);margin-bottom:24px;transition:color .25s}
+.lock-input{width:100%;padding:10px 14px;border-radius:7px;border:1px solid var(--bd);background:var(--card);color:var(--text);font-family:var(--mono);font-size:1rem;letter-spacing:.15em;text-align:center;outline:none;transition:border-color .15s;margin-bottom:10px}
+.lock-input:focus{border-color:var(--accent)}
+.lock-err{min-height:18px;font-size:.72rem;color:var(--red);margin-bottom:8px}
+.lock-btn{width:100%;padding:11px;border-radius:7px;background:var(--accent);color:#fff;font-weight:800;font-size:.85rem;transition:opacity .15s}
+.lock-btn:hover{opacity:.9}
+.lock-btn:disabled{opacity:.5;cursor:wait}
+.lock-hint{margin-top:14px;font-size:.65rem;color:var(--dim)}
 
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;max-width:560px;width:100%}
-.card{display:flex;flex-direction:column;align-items:center;text-align:center;padding:36px 20px 32px;background:var(--card);border:1px solid var(--bd);border-radius:10px;cursor:pointer;position:relative;transition:background .2s,border-color .2s}
-.card:hover{background:var(--accent);border-color:var(--accent)}
-.card:hover .card-label,.card:hover .card-desc{color:#fff}
-.card-ico{font-size:1.8rem;margin-bottom:10px}
-.card-label{font-size:.95rem;font-weight:700;margin-bottom:4px;transition:color .2s}
-.card-desc{font-size:.78rem;color:var(--muted);transition:color .25s;line-height:1.5}
-.card-wide{grid-column:span 2;padding:24px 20px;flex-direction:row;align-items:center;text-align:left;gap:16px}
-.card-wide .card-ico{margin-bottom:0;font-size:1.5rem}
+#app{flex:1;display:none;flex-direction:column;min-height:0}
+#app.on{display:flex}
+header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--bd);flex-wrap:wrap;position:relative}
+.brand{font-weight:900;font-size:1rem;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:var(--accent)}
+.role-chip{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:3px 7px;border-radius:20px;border:1px solid var(--bd);color:var(--muted)}
+.role-chip.admin{color:var(--accent2);border-color:var(--accent2)}
+.h-spacer{flex:1}
+.h-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--bd);background:var(--card);display:flex;align-items:center;justify-content:center;font-size:.95rem;transition:border-color .15s,background .2s;position:relative}
+.h-btn:hover{border-color:var(--accent)}
+.h-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:800;width:auto;padding:0 12px;font-size:.78rem;gap:6px;display:flex;align-items:center}
+.h-btn .badge{position:absolute;top:-5px;right:-5px;width:9px;height:9px;border-radius:50%;background:var(--gold);display:none}
+.h-btn .badge.on{display:block}
+#search{flex:1;min-width:140px;max-width:420px;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);background:var(--card);font-size:.8rem;outline:none;transition:border-color .15s}
+#search:focus{border-color:var(--accent)}
 
-.footer{border-top:1px solid var(--bd);padding:18px 28px;text-align:center;transition:border-color .25s}
-.footer span{font-size:.7rem;color:var(--muted);transition:color .25s}
+#banner{display:none;padding:8px 16px;font-size:.72rem;border-bottom:1px solid var(--bd);align-items:center;gap:10px}
+#banner.on{display:flex}
+#banner.warn{background:rgba(251,191,36,.08);color:var(--gold)}
+#banner.err{background:rgba(248,113,113,.08);color:var(--red)}
+#banner button{font-size:.72rem;font-weight:800;color:inherit;text-decoration:underline}
 
-@media(max-width:540px){
-  .grid{grid-template-columns:1fr;max-width:280px}
-  .hero{padding:40px 18px}
-  .card-wide{grid-column:span 1;flex-direction:column;align-items:center;text-align:center}
-  .card-wide .card-ico{margin-bottom:10px}
+#notifyPanel{display:none;position:absolute;top:100%;right:12px;margin-top:4px;z-index:150;width:280px;background:var(--surface);border:1px solid var(--bd);border-radius:10px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.45)}
+#notifyPanel.on{display:block}
+.np-title{font-size:.8rem;font-weight:800;margin-bottom:10px}
+.np-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.72rem;color:var(--muted);margin-bottom:10px}
+.np-status{font-size:.68rem;padding:3px 8px;border-radius:20px;border:1px solid var(--bd)}
+.np-status.on{color:var(--green);border-color:var(--green)}
+.np-status.off{color:var(--dim)}
+.np-status.denied{color:var(--red);border-color:var(--red)}
+.switch{position:relative;width:38px;height:20px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;border-radius:20px;background:var(--bd);transition:.2s}
+.slider::before{content:"";position:absolute;width:14px;height:14px;left:3px;top:3px;border-radius:50%;background:#fff;transition:.2s}
+.switch input:checked + .slider{background:var(--accent)}
+.switch input:checked + .slider::before{transform:translateX(18px)}
+.np-test{width:100%;padding:8px;border-radius:7px;border:1px solid var(--bd);background:var(--card);font-size:.72rem;font-weight:800;color:var(--accent2);margin-top:4px}
+.np-test:hover{border-color:var(--accent2)}
+.np-test:disabled{opacity:.5;cursor:wait}
+.np-msg{font-size:.68rem;color:var(--muted);margin-top:8px;min-height:14px}
+.np-num{width:64px;padding:5px 7px;border-radius:6px;border:1px solid var(--bd);background:var(--card);color:var(--text);font-family:var(--mono);font-size:.72rem;outline:none;text-align:center}
+.np-num:focus{border-color:var(--accent)}
+.np-sep{height:1px;background:var(--bd);margin:10px 0}
+.np-sub{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent2);margin-bottom:8px}
+.np-row > span:first-child{flex:1;min-width:0;line-height:1.35}
+.np-row > :last-child{flex-shrink:0}
+.np-box{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--bd);border-radius:6px;background:var(--card);padding:4px 9px;flex-shrink:0;transition:border-color .15s}
+.np-box:focus-within{border-color:var(--accent)}
+.np-box .np-num{width:26px;border:0;background:transparent;padding:0;-moz-appearance:textfield;appearance:textfield}
+.np-box .np-num::-webkit-outer-spin-button,.np-box .np-num::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.np-box i{font-style:normal;font-size:.7rem;color:var(--muted);white-space:nowrap}
+.np-time{width:76px;text-align:center}
+
+main{flex:1;overflow-y:auto;padding:16px;min-height:0;scrollbar-width:thin;scrollbar-color:var(--dim) transparent}
+main::-webkit-scrollbar{width:8px}
+main::-webkit-scrollbar-track{background:transparent}
+main::-webkit-scrollbar-thumb{background:var(--dim);border-radius:8px}
+main::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+#empty,.empty-noresult{text-align:center;padding:60px 20px;color:var(--muted)}
+#empty .big,.empty-noresult .big{font-size:2.2rem;margin-bottom:12px}
+#empty h2,.empty-noresult h2{font-size:1rem;color:var(--text);margin-bottom:6px}
+#empty p,.empty-noresult p{font-size:.78rem}
+#list{display:flex;flex-direction:column;gap:12px;max-width:720px;margin:0 auto}
+
+.vcard{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;transition:border-color .15s}
+.vcard:hover{border-color:var(--accent)}
+.vc-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.vc-name{font-weight:800;font-size:.95rem;letter-spacing:-.01em}
+.vc-db{font-family:var(--mono);font-size:.68rem;color:var(--accent2);background:rgba(108,111,245,.12);padding:3px 8px;border-radius:6px}
+.vc-host{font-size:.7rem;color:var(--muted)}
+.vc-host:hover{color:var(--accent2)}
+.vc-actions{display:flex;gap:6px;margin-left:auto}
+.icon-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--bd);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:.78rem;transition:border-color .15s}
+.icon-btn:hover{border-color:var(--accent)}
+.icon-btn.del:hover{border-color:var(--red);color:var(--red)}
+.vc-chevron{width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:1rem;color:var(--dim);transition:transform .2s;flex-shrink:0}
+.vcard.open .vc-chevron{transform:rotate(90deg)}
+.vc-body{display:none;padding-top:10px;border-top:1px solid var(--bd);margin-top:10px}
+.vcard.open .vc-body{display:block}
+.kv-del{width:28px;height:28px;border-radius:6px;border:1px solid transparent;color:var(--red);font-size:.75rem;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.kv-del:hover{border-color:var(--red);background:rgba(248,113,113,.1)}
+.rep-row{border:1px solid var(--bd);border-radius:9px;padding:10px;background:var(--card);display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.rep-row.invalid{border-color:var(--red)}
+.rep-head{display:flex;align-items:center;justify-content:space-between}
+.rep-title{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
+.rep-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rep-f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.rep-f.full{grid-column:1/-1}
+.rep-f label{font-size:.65rem;color:var(--muted)}
+.rep-f .pw-wrap input,.rep-f input{width:100%;padding:7px 9px;border-radius:7px;border:1px solid var(--bd);background:var(--surface);color:var(--text);font-size:.75rem;outline:none;transition:border-color .15s;box-sizing:border-box}
+.rep-f input.mono,.rep-f .pw-wrap input{font-family:var(--mono)}
+.rep-f input:focus{border-color:var(--accent)}
+.rep-radio{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 1px}
+.rr-opt{position:relative;cursor:pointer}
+.rr-opt input{position:absolute;inset:0;opacity:0;pointer-events:none}
+.rr-opt span{display:inline-block;padding:4px 10px;border:1px solid var(--bd);border-radius:999px;background:var(--surface);color:var(--muted);font-size:.66rem;line-height:1.3;transition:.15s}
+.rr-opt input:checked + span{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.rr-opt input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+.vc-fields{display:grid;grid-template-columns:1fr;gap:6px}
+@media (min-width:560px){.vc-fields{grid-template-columns:1fr 1fr}}
+.vrow{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--bd);border-radius:8px;padding:6px 10px}
+.vrow .lbl{font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);width:92px;flex-shrink:0}
+.vrow .val{font-family:var(--mono);font-size:.75rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;user-select:all}
+.vrow .val.masked{letter-spacing:.2em;color:var(--muted)}
+.vrow .val.empty{color:var(--dim);font-style:italic;font-family:var(--font)}
+.row-btn{width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:.72rem;color:var(--muted);transition:color .15s,background .15s;flex-shrink:0}
+.row-btn:hover{color:var(--accent2);background:var(--card)}
+.row-btn.ok{color:var(--green)}
+.vc-meta{display:flex;gap:12px;margin-top:8px;font-size:.65rem;color:var(--dim);flex-wrap:wrap}
+.vc-notes{margin-top:8px;font-size:.72rem;color:var(--muted);background:var(--surface);border:1px dashed var(--bd);border-radius:8px;padding:8px 10px;white-space:pre-wrap;word-break:break-word}
+.vc-notes-lbl{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-top:12px;margin-bottom:4px}
+.vc-sec-head{display:flex;align-items:center;gap:6px;cursor:pointer;margin-top:12px;user-select:none;padding:2px 0}
+.vc-sec-head:hover .vc-sec-lbl{color:var(--accent2)}
+.vc-sec-chev{font-size:.8rem;color:var(--dim);transition:transform .2s;flex-shrink:0}
+.vc-sec.open .vc-sec-chev{transform:rotate(90deg)}
+.vc-sec-lbl{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);transition:color .15s}
+.vc-sec-body{display:none}
+.vc-sec.open .vc-sec-body{display:block}
+.vc-sec-body .vc-notes{margin-top:6px}
+.vc-link{color:var(--accent2);text-decoration:none}
+.vc-link:hover{text-decoration:underline}
+.cc{margin-top:12px}
+.cc-tabs{display:flex;gap:4px;padding:4px;background:var(--surface);border:1px solid var(--bd);border-radius:999px;width:fit-content;max-width:100%}
+.cc-tab{display:flex;align-items:center;gap:7px;padding:5px 14px;border:0;border-radius:999px;background:transparent;color:var(--muted);font-size:.66rem;font-weight:800;letter-spacing:.03em;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
+.cc-tab:hover{color:var(--text)}
+.cc-tab.active{background:var(--accent);color:#fff}
+.cc-count{font-size:.6rem;font-weight:700;opacity:.7}
+.cc-panel{padding-top:8px}
+.cc-panel .vrow{background:var(--card);margin-top:4px}
+.cc-panel .vrow:first-child{margin-top:0}
+.cc-empty{font-size:.7rem;color:var(--dim);font-style:italic;padding:4px 0}
+.cc-add{width:100%;padding:7px;margin-top:8px;border-radius:7px;border:1px dashed var(--bd);background:transparent;color:var(--muted);font-size:.73rem;font-weight:600;transition:border-color .15s,color .15s}
+.cc-add:hover{border-color:var(--accent);color:var(--accent2)}
+.b-acts{display:flex;gap:4px;justify-content:flex-end;margin-top:2px}
+.ed-foot{display:flex;gap:8px;justify-content:flex-end;padding-top:2px}
+.ed-foot .btn-ghost,.ed-foot .btn-save{padding:6px 14px;font-size:.73rem;border-radius:7px}
+.vc-bill{display:flex;flex-direction:column;gap:4px;background:var(--surface);border:1px solid var(--bd);border-radius:8px;padding:7px 10px;margin-bottom:6px}
+.b-line{display:flex;align-items:center;gap:8px;min-width:0}
+.vc-bill .b-domain{font-family:var(--mono);font-size:.74rem;font-weight:700}
+.b-freq{font-size:.6rem;font-weight:700;color:var(--accent2);border:1px solid var(--bd);border-radius:999px;padding:1px 7px;background:var(--card);flex-shrink:0;white-space:nowrap}
+.vc-bill .b-nominal{font-family:var(--mono);font-size:.72rem;color:var(--text)}
+.vc-bill .b-due{font-size:.68rem;color:var(--dim);margin-left:auto;flex-shrink:0;white-space:nowrap}
+.vc-bill .b-due.soon{color:var(--gold);font-weight:700}
+.vc-bill .b-due.late{color:var(--red);font-weight:700}
+.vc-bill .b-due.ok{color:var(--green)}
+
+.overlay{position:fixed;inset:0;z-index:300;background:rgba(5,5,10,.72);display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
+.overlay.on{display:flex}
+.mbox{background:var(--surface);border:1px solid var(--bd);border-radius:14px;width:100%;max-width:460px;max-height:88vh;display:flex;flex-direction:column}
+.mhead{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--bd)}
+.mhead h2{font-size:.95rem;font-weight:800}
+.mclose{width:28px;height:28px;border-radius:6px;color:var(--muted);font-size:1rem}
+.mclose:hover{background:var(--card);color:var(--text)}
+.mbody{padding:16px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin;scrollbar-color:var(--dim) transparent}
+.mbody::-webkit-scrollbar{width:8px}
+.mbody::-webkit-scrollbar-track{background:transparent}
+.mbody::-webkit-scrollbar-thumb{background:var(--dim);border-radius:8px}
+.mbody::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.fgroup{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--accent2);margin-top:4px}
+.field label{display:block;font-size:.7rem;color:var(--muted);margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--bd);background:var(--card);font-size:.8rem;outline:none;transition:border-color .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
+.field input.mono{font-family:var(--mono)}
+.field textarea{resize:vertical;min-height:56px}
+.field .err{display:none;font-size:.65rem;color:var(--red);margin-top:3px}
+.field.invalid input{border-color:var(--red)}
+.field.invalid .err{display:block}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:36px}
+.pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:5px;color:var(--muted);font-size:.75rem}
+.pw-eye:hover{color:var(--accent2)}
+.mfoot{display:flex;gap:10px;padding:14px 20px;border-top:1px solid var(--bd)}
+.mfoot button{flex:1;padding:10px;border-radius:8px;font-weight:800;font-size:.8rem}
+.btn-ghost{border:1px solid var(--bd);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--muted);color:var(--text)}
+.btn-save{background:var(--accent);color:#fff}
+.btn-save:hover{opacity:.9}
+.btn-danger{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+.btn-danger:hover{background:rgba(248,113,113,.2)}
+
+#copyModal .mbox{max-width:400px}
+#copyText{width:100%;min-height:90px;font-family:var(--mono);font-size:.8rem;padding:10px;border-radius:7px;border:1px solid var(--bd);background:var(--card);resize:none}
+
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);z-index:500;background:var(--card);border:1px solid var(--accent);color:var(--text);font-size:.75rem;font-weight:600;padding:9px 18px;border-radius:24px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (max-width:560px){
+  header{gap:8px}
+  .brand span.full{display:none}
+  #search{order:10;flex-basis:100%;max-width:none}
+  .vrow .lbl{width:72px}
 }
 </style>
 </head>
 <body>
 
-<nav class="nav">
-  <span class="nav-title">Rak Perpustakaan</span>
-  <span class="nav-spacer"></span>
-  <button class="theme-btn" id="themeBtn" title="Ganti tema">🌙</button>
-</nav>
-
-<div class="hero">
-  <h1>Rak Perpustakaan</h1>
-  <p>Pilih rak — setiap bagian berisi referensi dan praktik untuk dikembangkan bersama.</p>
-  <div class="grid">
-    <a href="proyekan/index.html" class="card">
-      <div class="card-ico">🛠️</div>
-      <div class="card-label">Tim Proyekan</div>
-      <div class="card-desc">Code &amp; command yang sering digunakan di berbagai stack.</div>
-    </a>
-    <a href="pengajar/index.html" class="card">
-      <div class="card-ico">🧑‍🏫</div>
-      <div class="card-label">Tim Pengajar</div>
-      <div class="card-desc">Sektor industri Indonesia — korelasi dengan modul ERP.</div>
-    </a>
-    <a href="pemasaran/index.html" class="card">
-      <div class="card-ico">📢</div>
-      <div class="card-label">Tim Pemasaran</div>
-      <div class="card-desc">Siklus penawaran — rute positif, negatif, dan edge case.</div>
-    </a>
-    <a href="mitra/index.html" class="card">
-      <div class="card-ico">🤝</div>
-      <div class="card-label">Mitra</div>
-      <div class="card-desc">Mitra yang telah berkolaborasi dalam ekosistem.</div>
-    </a>
-    <a href="todolist/index.html" class="card card-wide">
-      <div class="card-ico">🏢</div>
-      <div class="card-label" id="kelolLabel">Kelola Alteco</div>
-    </a>
+<div id="secureError">
+  <div class="secure-box">
+    <h1>Butuh koneksi aman</h1>
+    <p>Web Crypto API hanya tersedia di HTTPS atau localhost. Buka aplikasi ini melalui <b>https://</b> atau <b>http://localhost</b>, bukan IP jaringan.</p>
   </div>
 </div>
 
-<footer class="footer"><span>© 2026 Rak Perpustakaan</span></footer>
+<div id="splash"><div class="ring"></div><p>Memuat vault…</p></div>
+
+<div id="lock" class="hidden">
+  <form class="lock-box" id="lockForm" autocomplete="off">
+    <div class="lock-ico">🔐</div>
+    <div class="lock-title">Odoo Vault</div>
+    <div class="lock-sub" id="lockSub">Masukkan password untuk membuka vault</div>
+    <input class="lock-input" id="lockPw" type="password" placeholder="••••••••" autocomplete="off" maxlength="64" required>
+    <div class="lock-err" id="lockErr"></div>
+    <button class="lock-btn" id="lockBtn" type="submit">Buka Vault</button>
+    <div class="lock-hint" id="lockHint"></div>
+  </form>
+</div>
+
+<div id="app">
+  <header>
+    <div class="brand"><span class="dot"></span><span>Odoo<span class="full"> Vault</span></span></div>
+    <span class="role-chip" id="roleChip"></span>
+    <span class="h-spacer"></span>
+    <input id="search" type="search" placeholder="Cari project, db, email…" autocomplete="off">
+    <button class="h-btn" id="btnBell" title="Notifikasi">🔔<span class="badge" id="bellBadge"></span></button>
+    <button class="h-btn primary" id="btnAdd">＋ Tambah</button>
+    <button class="h-btn" id="btnTheme" title="Ganti tema">🌓</button>
+    <button class="h-btn" id="btnLock" title="Kunci vault">🔒</button>
+    <div id="notifyPanel">
+      <div class="np-title">Push Notification</div>
+      <div class="np-row">
+        <span id="npStateLabel">Status: —</span>
+        <span class="np-status off" id="npStatus">off</span>
+      </div>
+      <div class="np-row">
+        <span>Aktifkan push notif</span>
+        <label class="switch"><input type="checkbox" id="npToggle"><span class="slider"></span></label>
+      </div>
+      <div class="np-sep"></div>
+      <div class="np-sub">Pengingat tagihan</div>
+      <div class="np-row">
+        <span>Kirim pengingat jatuh tempo</span>
+        <label class="switch"><input type="checkbox" id="npBillToggle"><span class="slider"></span></label>
+      </div>
+      <div class="np-row">
+        <span>Ingatkan sebelum jatuh tempo</span>
+        <span class="np-box"><input class="np-num" type="number" id="npDays" min="0" max="30" value="3"><i>hari</i></span>
+      </div>
+      <div class="np-row">
+        <span>Jam kirim (WIB)</span>
+        <input class="np-num np-time" type="text" id="npTime" value="07:00" maxlength="5" placeholder="07:00" inputmode="numeric" autocomplete="off">
+      </div>
+      <button class="np-test" id="npTest" style="display:none">Kirim notif uji</button>
+      <div class="np-msg" id="npMsg"></div>
+    </div>
+  </header>
+
+  <div id="banner"><span id="bannerText"></span><button id="bannerBtn" style="display:none">Coba lagi</button></div>
+
+  <main>
+    <div id="empty" style="display:none">
+      <div class="big">🗄️</div>
+      <h2>Belum ada project</h2>
+      <p id="emptyHint">Klik <b>＋ Tambah</b> untuk menyimpan kredensial Odoo pertama.</p>
+    </div>
+    <div id="list"></div>
+  </main>
+</div>
+
+<div class="overlay" id="modal">
+  <form class="mbox" id="modalForm" autocomplete="off" novalidate>
+    <div class="mhead">
+      <h2 id="modalTitle">Tambah Project</h2>
+      <button class="mclose" type="button" id="modalClose">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="fgroup">Parent (master)</div>
+      <div class="field" id="f-name-wrap">
+        <label for="fi-name">Nama project *</label>
+        <input id="fi-name" maxlength="200" placeholder="mis. namaproject" required>
+        <div class="err">Nama project wajib diisi</div>
+      </div>
+      <div class="field">
+        <label for="fi-host">Host / URL Odoo</label>
+        <input id="fi-host" maxlength="200" placeholder="https://example.com">
+      </div>
+      <div class="field">
+        <label for="fi-github">GitHub</label>
+        <input id="fi-github" maxlength="300" placeholder="https://example.com/user/repo">
+      </div>
+      <div class="field">
+        <label for="fi-goLive">URL Go Live</label>
+        <input id="fi-goLive" maxlength="300" placeholder="https://example.com">
+      </div>
+      <div class="field">
+        <label for="fi-pitchdeck">Pitchdeck</label>
+        <input id="fi-pitchdeck" maxlength="300" placeholder="https://example.com" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="fi-overview">Overview (.md)</label>
+        <textarea id="fi-overview" maxlength="4000" placeholder="Ringkasan project…"></textarea>
+      </div>
+      <div class="field">
+        <label for="fi-plan">Plan (.md)</label>
+        <textarea id="fi-plan" maxlength="4000" placeholder="Rencana pengerjaan…"></textarea>
+      </div>
+      <div class="field">
+        <label for="fi-email">Email</label>
+        <input id="fi-email" type="email" maxlength="200" placeholder="admin@example.com" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="fi-emailPassword">Email password</label>
+        <div class="pw-wrap">
+          <input id="fi-emailPassword" class="mono" type="password" maxlength="200" autocomplete="new-password">
+          <button class="pw-eye" type="button" data-eye="fi-emailPassword">👁</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="fi-phone">Phone number</label>
+        <input id="fi-phone" class="mono" maxlength="50" placeholder="08xx…" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="fi-pic">PIC</label>
+        <input id="fi-pic" maxlength="100" placeholder="mis. Nama" autocomplete="off">
+      </div>
+
+      <div class="fgroup">Lainnya</div>
+      <div class="field">
+        <label for="fi-notes">Catatan</label>
+        <textarea id="fi-notes" maxlength="500" placeholder="Catatan opsional…"></textarea>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn-ghost" type="button" id="modalCancel">Batal</button>
+      <button class="btn-save" type="button" id="modalSave">Simpan</button>
+    </div>
+  </form>
+</div>
+
+<div class="overlay" id="confirmModal">
+  <div class="mbox" style="max-width:340px">
+    <div class="mhead"><h2 id="confirmTitle">Hapus project?</h2></div>
+    <div class="mbody"><p style="font-size:.78rem;color:var(--muted)" id="confirmText"></p></div>
+    <div class="mfoot">
+      <button class="btn-ghost" type="button" id="confirmNo">Batal</button>
+      <button class="btn-danger" type="button" id="confirmYes">Hapus</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="copyModal">
+  <div class="mbox">
+    <div class="mhead"><h2>Copy manual</h2><button class="mclose" type="button" id="copyClose">✕</button></div>
+    <div class="mbody">
+      <p style="font-size:.7rem;color:var(--muted)">Clipboard tidak tersedia — pilih teks lalu salin manual.</p>
+      <textarea id="copyText" readonly></textarea>
+    </div>
+    <div class="mfoot"><button class="btn-ghost" type="button" id="copyDone">Tutup</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
 
 <script>
-(function(){
+const PASS_ADMIN = '19950328';
+const PASS_VIEW  = '20251208';
+const LS_KEY     = 'odoo_vault_v1';
+const GIST_ID    = '7d7efa17459b6f9e606d83c1a80c7c7f';
+const GIST_FILE  = 'alteco-data.json';
+const WORKER_URL = 'https://alteco-writer.m-rafi-afif.workers.dev';
+const ONESIGNAL_APP_ID = '23abe312-d94d-4a88-ad7a-bac16e9a90d0';
+const PBKDF2_ITER = 310000;
+const CHECK_MAGIC = 'nyam-odoo-vault-v1';
+const SESSION_KEY = 'odoo_vault_session';
+const FIELDS = [
+  { key:'name',          label:'Nama',           secret:false, required:true },
+  { key:'host',          label:'Host',           secret:false, link:true },
+  { key:'github',        label:'GitHub',         secret:false, link:true },
+  { key:'goLive',        label:'Go Live',        secret:false, link:true },
+  { key:'pitchdeck',     label:'Pitchdeck',      secret:false, link:true },
+  { key:'email',         label:'Email',          secret:true },
+  { key:'emailPassword', label:'Email Password', secret:true },
+  { key:'phone',         label:'Phone',          secret:true },
+  { key:'pic',           label:'PIC',            secret:false },
+  { key:'overview',      label:'Overview',       secret:false, longtext:true },
+  { key:'plan',          label:'Plan',           secret:false, longtext:true },
+  { key:'notes',         label:'Catatan',        secret:false, longtext:true },
+];
+const CARD_SECRET_FIELDS = ['email','emailPassword'];
+const CARD_LINK_FIELDS = ['host','github','goLive','pitchdeck'];
+const CARD_LONG_FIELDS = ['overview','plan'];
+
+let db = null;
+let vaultKey = null;
+let role = null;
+let vaultItems = [];
+let searchQuery = '';
+let editingId = null;
+let pendingDelete = null;
+let inlineEditor = null;
+const tabByCard = new Map();
+let _saveTimer = null;
+let _retryTimer = null;
+let _retryCount = 0;
+let _migrateLocalKey = null;
+let persistentBanner = null;
+let _saving = false;
+let _metaDirty = false;
+const revealed = new Set();
+const expandedCards = new Set();
+const expandedSections = new Set();
+const kvRevealed = new Set();
+
+function clearItemReveal(id, keepExpanded){
+  if (!keepExpanded){
+    expandedCards.delete(id);
+    for (const k of [...expandedSections]) if (k.startsWith(id + ':')) expandedSections.delete(k);
+  }
+  for (const k of [...revealed]) if (k.startsWith(id + ':')) revealed.delete(k);
+  for (const k of [...kvRevealed]) if (k.startsWith(id + ':')) kvRevealed.delete(k);
+}
+function pruneKvRevealed(it){
+  const n = (it.dbs || []).length;
+  for (const k of [...kvRevealed]){
+    if (k.startsWith(it.id + ':')){
+      const sub = k.slice(it.id.length + 1);
+      const m = /^db:(\d+):/.exec(sub);
+      if (m && !(parseInt(m[1], 10) >= 0 && parseInt(m[1], 10) < n)) kvRevealed.delete(k);
+    }
+  }
+}
+function normalizeDbs(dbs){
+  if (!Array.isArray(dbs)) return [];
+  const out = [];
+  const seenDb = new Set();
+  for (const d of dbs){
+    if (!d || typeof d !== 'object') continue;
+    if ('dbName' in d || 'masterPass' in d){
+      const name = String(d.dbName || '').trim();
+      if (name && !seenDb.has(name)){
+        seenDb.add(name);
+        out.push({ key: name, value: String(d.masterPass || '') });
+      }
+      const k = String(d.key || '').trim();
+      const v = d.value;
+      if (k || v) out.push({ key: k, value: String(v ?? '') });
+    }else{
+      const k = String(d.key || '').trim();
+      const v = d.value;
+      if (k || v) out.push({ key: k, value: String(v ?? '') });
+    }
+  }
+  return out;
+}
+
+const $ = id => document.getElementById(id);
+
+function esc(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function uid(){
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+}
+function freshDb(){
+  return { projects: [], meta: null, orgName: 'Odoo Vault', settings: defaultSettings() };
+}
+function defaultSettings(){
+  return { pushNotifEnabled: false, billingReminderEnabled: false, reminderDaysBefore: 3, reminderTime: '07:00' };
+}
+function normalizeDb(d){
+  const out = d && typeof d === 'object' ? d : freshDb();
+  if (!Array.isArray(out.projects)) out.projects = [];
+  out.projects = out.projects.filter(p => p && typeof p === 'object' && typeof p.id === 'string' && p.id);
+  if (!out.settings || typeof out.settings !== 'object') out.settings = defaultSettings();
+  const ds = defaultSettings();
+  for (const k of Object.keys(ds)) if (out.settings[k] === undefined) out.settings[k] = ds[k];
+  if (typeof out.orgName !== 'string' || !out.orgName) out.orgName = 'Odoo Vault';
+  return out;
+}
+function todayLabel(){
   try{
-    const d=JSON.parse(localStorage.getItem('rakperpus_alteco_v2'));
-    if(d&&d.orgName) document.getElementById('kelolLabel').textContent='Kelola '+d.orgName;
-  }catch{}
-})();
-(function(){
-  const btn=document.getElementById('themeBtn'),html=document.documentElement;
-  if(localStorage.getItem('theme')==='light'){html.setAttribute('data-theme','light');btn.textContent='☀️'}
-  btn.addEventListener('click',()=>{
-    if(html.getAttribute('data-theme')==='light'){html.removeAttribute('data-theme');btn.textContent='🌙';localStorage.setItem('theme','dark')}
-    else{html.setAttribute('data-theme','light');btn.textContent='☀️';localStorage.setItem('theme','light')}
+    return new Date().toLocaleDateString('id-ID', { weekday:'short', day:'numeric', month:'short' });
+  }catch{ return ''; }
+}
+function dateLabel(ts){
+  try{
+    return new Date(ts).toLocaleDateString('id-ID', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+  }catch{ return todayLabel(); }
+}
+let _toastTimer = null;
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('on'), 2200);
+}
+
+function bytesToB64(bytes){
+  let bin = '';
+  const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  for (let i = 0; i < arr.length; i++) bin += String.fromCharCode(arr[i]);
+  return btoa(bin);
+}
+function b64ToBytes(b64){
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+function randomBytes(n){
+  const b = new Uint8Array(n);
+  crypto.getRandomValues(b);
+  return b;
+}
+async function deriveKey(password, saltBytes){
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt:saltBytes, iterations:PBKDF2_ITER, hash:'SHA-256' },
+    base,
+    { name:'AES-GCM', length:256 },
+    false,
+    ['encrypt','decrypt']
+  );
+}
+async function encryptObj(key, obj){
+  const iv = randomBytes(12);
+  const data = new TextEncoder().encode(JSON.stringify(obj));
+  const ct = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, data);
+  return { iv: bytesToB64(iv), payload: bytesToB64(new Uint8Array(ct)) };
+}
+async function decryptObj(key, ivB64, payloadB64){
+  const pt = await crypto.subtle.decrypt(
+    { name:'AES-GCM', iv:b64ToBytes(ivB64) },
+    key,
+    b64ToBytes(payloadB64)
+  );
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+function localLoad(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    return normalizeDb(JSON.parse(raw));
+  }catch{
+    showBanner('Cache lokal rusak — diabaikan', 'warn');
+    return null;
+  }
+}
+async function gistLoad(){
+  const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+    cache: 'no-store',
+    headers: { 'Accept': 'application/vnd.github+json', 'User-Agent': 'odoo-vault' }
   });
-})();
+  if (r.status === 404) throw new Error('gist-missing');
+  if (!r.ok) throw new Error('gist ' + r.status);
+  const gist = await r.json();
+  const content = gist.files?.[GIST_FILE]?.content;
+  if (!content) throw new Error('gist-missing');
+  return normalizeDb(JSON.parse(content));
+}
+function mergeArrClient(a = [], b = []){
+  const map = new Map();
+  for (const item of a){
+    if (item && typeof item === 'object' && typeof item.id === 'string' && item.id) map.set(item.id, item);
+  }
+  for (const item of b){
+    if (!item || typeof item !== 'object' || typeof item.id !== 'string' || !item.id) continue;
+    const ex = map.get(item.id);
+    if (!ex || (item.updatedAt || 0) >= (ex.updatedAt || 0)) map.set(item.id, item);
+  }
+  const bIds = new Set(b.filter(x => x && typeof x.id === 'string' && x.id).map(x => x.id));
+  return [
+    ...b.filter(x => x && typeof x.id === 'string' && x.id).map(x => map.get(x.id)).filter(Boolean),
+    ...[...map.values()].filter(x => !bIds.has(x.id)),
+  ];
+}
+function saveSession(pw){
+  try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify({ v: 1, pw })); }catch{}
+}
+function loadSession(){
+  try{
+    const s = JSON.parse(sessionStorage.getItem(SESSION_KEY));
+    return s && s.v === 1 && typeof s.pw === 'string' ? s.pw : null;
+  }catch{ return null; }
+}
+function clearSession(){
+  try{ sessionStorage.removeItem(SESSION_KEY); }catch{}
+}
+function mergeOnLoad(gist, local){
+  return normalizeDb({
+    ...gist,
+    ...local,
+    projects: mergeArrClient(gist.projects || [], local.projects || []),
+    meta: gist.meta || local.meta || null,
+    settings: local.settings || gist.settings || defaultSettings(),
+    orgName: local.orgName || gist.orgName || 'Odoo Vault',
+  });
+}
+
+function showBanner(text, kind, withRetry){
+  const b = $('banner');
+  $('bannerText').textContent = text;
+  b.className = 'on ' + (kind || 'warn');
+  $('bannerBtn').style.display = withRetry ? '' : 'none';
+}
+function hideBanner(){
+  const b = $('banner');
+  b.className = '';
+  $('bannerText').textContent = '';
+  $('bannerBtn').style.display = 'none';
+  if (persistentBanner) showBanner(persistentBanner.text, persistentBanner.kind, false);
+}
+function setPersistentBanner(text, kind){
+  persistentBanner = text ? { text, kind } : null;
+  if (persistentBanner) showBanner(persistentBanner.text, persistentBanner.kind, false);
+  else hideBanner();
+}
+function savePayload(){
+  if (!db) return db;
+  const { reminderLog, ...withoutLog } = db;
+  if (!_metaDirty) return withoutLog;
+  const { meta, ...rest } = withoutLog;
+  return rest;
+}
+function save(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(db)); }catch{}
+  if (!WORKER_URL) return;
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => _doSave(), 300);
+}
+async function _doSave(){
+  if (!vaultKey){
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(db)); }catch{}
+    return;
+  }
+  clearTimeout(_retryTimer);
+  try{
+    const r = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(savePayload())
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    _retryCount = 0;
+    hideBanner();
+  }catch(e){
+    showBanner('Gagal tersinkron ke Gist — perubahan aman di lokal', 'err', true);
+    _retryCount = Math.min(_retryCount + 1, 5);
+    _retryTimer = setTimeout(() => _doSave(), Math.min(8000 * Math.pow(2, _retryCount - 1), 120000));
+  }
+}
+function flushSync(){
+  clearTimeout(_saveTimer);
+  clearTimeout(_retryTimer);
+  if (!WORKER_URL || !db) return;
+  const blob = new Blob([JSON.stringify(savePayload())], { type: 'application/json' });
+  let ok = false;
+  try{ ok = navigator.sendBeacon(WORKER_URL, blob); }catch{}
+  if (!ok){
+    try{ fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(savePayload()), keepalive: true }); }catch{}
+  }
+}
+window.addEventListener('beforeunload', flushSync);
+window.addEventListener('pagehide', flushSync);
+$('bannerBtn').addEventListener('click', () => _doSave());
+
+function isVaultItem(it){
+  return it && !it.deleted && it.iv && it.payload;
+}
+async function decryptAll(){
+  const items = [];
+  let migrated = 0, unreadable = 0, legacy = 0;
+  for (const it of db.projects){
+    if (!isVaultItem(it)) continue;
+    let obj = null;
+    try{
+      obj = await decryptObj(vaultKey, it.iv, it.payload);
+    }catch{
+      if (_migrateLocalKey){
+        try{
+          obj = await decryptObj(_migrateLocalKey, it.iv, it.payload);
+          const enc = await encryptObj(vaultKey, obj);
+          it.iv = enc.iv;
+          it.payload = enc.payload;
+          it.updatedAt = Date.now();
+          migrated++;
+        }catch{}
+      }
+      if (!obj){ unreadable++; continue; }
+    }
+    if (obj.v !== 2){ legacy++; continue; }
+    items.push({ id: it.id, updatedAt: it.updatedAt, ...obj, dbs: normalizeDbs(obj.dbs) });
+  }
+  return { items, migrated, unreadable, legacy };
+}
+
+function setLockError(msg, sub){
+  $('lockErr').textContent = msg || '';
+  if (sub !== undefined) $('lockSub').textContent = sub;
+}
+function lockBusy(on){
+  $('lockBtn').disabled = on;
+  $('lockBtn').textContent = on ? 'Membuka…' : 'Buka Vault';
+}
+async function attemptUnlock(pw, silent){
+  setLockError('');
+  if (pw !== PASS_ADMIN && pw !== PASS_VIEW){
+    if (silent){
+      clearSession();
+      setLockError('Sesi berakhir — masukkan password lagi');
+      return false;
+    }
+    lockBusy(true);
+    setLockError('Password salah');
+    await new Promise(r => setTimeout(r, 1000));
+    lockBusy(false);
+    $('lockPw').value = '';
+    $('lockPw').focus();
+    return false;
+  }
+  role = pw === PASS_ADMIN ? 'admin' : 'viewer';
+  lockBusy(true);
+  try{
+    if (!db.meta){
+      const salt = randomBytes(16);
+      const key = await deriveKey(PASS_ADMIN, salt);
+      const check = await encryptObj(key, { m: CHECK_MAGIC });
+      db.meta = { salt: bytesToB64(salt), check };
+      vaultKey = key;
+      save();
+    }else{
+      let key;
+      try{
+        key = await deriveKey(PASS_ADMIN, b64ToBytes(db.meta.salt));
+      }catch{
+        throw new Error('bad');
+      }
+      try{
+        const chk = await decryptObj(key, db.meta.check.iv, db.meta.check.payload);
+        if (chk?.m !== CHECK_MAGIC) throw new Error('bad');
+      }catch{
+        setLockError('Vault rusak — data tidak bisa didekripsi', 'Kontak admin; jangan menimpa data.');
+        lockBusy(false);
+        if (silent) clearSession();
+        return false;
+      }
+      vaultKey = key;
+    }
+    saveSession(pw);
+    await enterApp();
+    return true;
+  }catch(e){
+    setLockError('Gagal membuka vault');
+    lockBusy(false);
+    return false;
+  }
+}
+async function enterApp(){
+  const res = await decryptAll();
+  vaultItems = res.items;
+  revealed.clear();
+  kvRevealed.clear();
+  expandedCards.clear();
+  expandedSections.clear();
+  tabByCard.clear();
+  inlineEditor = null;
+  $('lock').classList.add('hidden');
+  $('app').classList.add('on');
+  $('lockPw').value = '';
+  lockBusy(false);
+  const chip = $('roleChip');
+  chip.textContent = role;
+  chip.className = 'role-chip ' + role;
+  $('btnAdd').style.display = role === 'admin' ? '' : 'none';
+  $('npTest').style.display = role === 'admin' ? '' : 'none';
+  $('emptyHint').innerHTML = role === 'admin'
+    ? 'Klik <b>＋ Tambah</b> untuk menyimpan kredensial Odoo pertama.'
+    : 'Belum ada project tersimpan di vault ini.';
+  renderList();
+  refreshNotifyPanel();
+  if (db.settings.pushNotifEnabled) loadOneSignalSDK();
+  if (res.migrated > 0){
+    save();
+    toast(res.migrated + ' item dipindahkan ke vault server');
+  }
+  if (res.unreadable > 0){
+    setPersistentBanner(res.unreadable + ' item tidak terbaca — dibuat di vault lain dengan kunci berbeda dan tidak bisa dimigrasi otomatis', 'warn');
+  }else if (res.migrated > 0){
+    setPersistentBanner(null);
+  }
+  _migrateLocalKey = null;
+}
+function lockVault(){
+  if (db) flushSync();
+  vaultKey = null;
+  vaultItems = [];
+  role = null;
+  revealed.clear();
+  kvRevealed.clear();
+  expandedCards.clear();
+  expandedSections.clear();
+  tabByCard.clear();
+  inlineEditor = null;
+  clearSession();
+  $('app').classList.remove('on');
+  $('lock').classList.remove('hidden');
+  $('notifyPanel').classList.remove('on');
+  $('search').value = '';
+  searchQuery = '';
+  $('lockErr').textContent = '';
+  $('lockSub').textContent = 'Masukkan password untuk membuka vault';
+  $('lockPw').value = '';
+  $('lockPw').focus();
+}
+
+$('lockForm').addEventListener('submit', e => {
+  e.preventDefault();
+  attemptUnlock($('lockPw').value);
+});
+$('btnLock').addEventListener('click', lockVault);
+
+function visibleItems(){
+  const q = searchQuery.trim().toLowerCase();
+  let items = vaultItems.filter(it => true);
+  if (q){
+    items = items.filter(it => {
+      const hay = [
+        it.name, it.host, it.github, it.goLive, it.pitchdeck, it.email, it.phone, it.pic, it.notes,
+        ...(it.dbs || []).map(d => d.key),
+        ...(it.bills || []).map(b => b.domain),
+      ];
+      return hay.some(v => String(v || '').toLowerCase().includes(q));
+    });
+  }
+  return items.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+}
+function findItem(id){
+  return vaultItems.find(it => it.id === id);
+}
+function findDbItem(id){
+  return db.projects.find(it => it.id === id);
+}
+function buildPayload(it){
+  return {
+    v: 2,
+    name: it.name || '',
+    host: it.host || '',
+    github: it.github || '',
+    goLive: it.goLive || '',
+    pitchdeck: it.pitchdeck || '',
+    overview: it.overview || '',
+    plan: it.plan || '',
+    email: it.email || '',
+    emailPassword: it.emailPassword || '',
+    phone: it.phone || '',
+    pic: it.pic || '',
+    dbs: it.dbs || [],
+    bills: it.bills || [],
+    notes: it.notes || '',
+  };
+}
+async function persistItem(it){
+  if (!vaultKey) return;
+  const enc = await encryptObj(vaultKey, buildPayload(it));
+  const item = findDbItem(it.id);
+  const now = Date.now();
+  if (item){
+    item.iv = enc.iv;
+    item.payload = enc.payload;
+    item.updatedAt = now;
+  }
+  it.updatedAt = now;
+  save();
+}
+
+function renderList(){
+  const list = $('list');
+  const items = visibleItems();
+  const hasAny = vaultItems.length > 0;
+  $('empty').style.display = hasAny ? 'none' : '';
+  list.innerHTML = '';
+  if (!hasAny) return;
+  if (items.length === 0){
+    list.innerHTML = '<div class="empty-noresult" style="display:block"><div class="big">🔍</div><h2>Tidak ditemukan</h2><p>Tidak ada project yang cocok dengan pencarian.</p></div>';
+    return;
+  }
+  for (const it of items) list.appendChild(renderCard(it));
+}
+function renderCard(it){
+  pruneKvRevealed(it);
+  const card = document.createElement('div');
+  card.className = 'vcard';
+  card.dataset.id = it.id;
+
+  const head = document.createElement('div');
+  head.className = 'vc-head';
+  const name = document.createElement('span');
+  name.className = 'vc-name';
+  name.textContent = it.name || '(tanpa nama)';
+  head.appendChild(name);
+  const chev = document.createElement('span');
+  chev.className = 'vc-chevron';
+  chev.textContent = '▸';
+  head.appendChild(chev);
+  if (role === 'admin'){
+    const acts = document.createElement('span');
+    acts.className = 'vc-actions';
+    acts.innerHTML = `<button class="icon-btn" data-act="edit" title="Edit">✎</button><button class="icon-btn del" data-act="del" title="Hapus">🗑</button>`;
+    head.appendChild(acts);
+  }
+  card.appendChild(head);
+
+  const body = document.createElement('div');
+  body.className = 'vc-body';
+
+  const fields = document.createElement('div');
+  fields.className = 'vc-fields';
+  for (const fk of CARD_SECRET_FIELDS){
+    const f = FIELDS.find(x => x.key === fk);
+    if (f) fields.appendChild(renderRow(it, f));
+  }
+  for (const lk of CARD_LINK_FIELDS){
+    if (!it[lk]) continue;
+    fields.appendChild(renderLinkRow(lk, it[lk]));
+  }
+  if (it.phone) fields.appendChild(renderPlainRow('Phone', it.phone));
+  if (it.pic) fields.appendChild(renderPlainRow('PIC', it.pic));
+  body.appendChild(fields);
+
+  for (const longKey of CARD_LONG_FIELDS){
+    if (!it[longKey]) continue;
+    const secKey = it.id + ':' + longKey;
+    const sec = document.createElement('div');
+    sec.className = 'vc-sec' + (expandedSections.has(secKey) ? ' open' : '');
+    const sh = document.createElement('div');
+    sh.className = 'vc-sec-head';
+    sh.dataset.sec = longKey;
+    const sch = document.createElement('span');
+    sch.className = 'vc-sec-chev';
+    sch.textContent = '▸';
+    const st = document.createElement('span');
+    st.className = 'vc-sec-lbl';
+    st.textContent = FIELDS.find(x => x.key === longKey)?.label || longKey;
+    sh.append(sch, st);
+    const sb = document.createElement('div');
+    sb.className = 'vc-sec-body';
+    const blk = document.createElement('div');
+    blk.className = 'vc-notes';
+    blk.textContent = it[longKey];
+    sb.appendChild(blk);
+    sec.append(sh, sb);
+    body.appendChild(sec);
+  }
+
+  if (it.notes){
+    const nbl = document.createElement('div');
+    nbl.className = 'vc-notes-lbl';
+    nbl.textContent = 'Catatan';
+    body.appendChild(nbl);
+    const notes = document.createElement('div');
+    notes.className = 'vc-notes';
+    notes.textContent = it.notes;
+    body.appendChild(notes);
+  }
+
+  body.appendChild(renderChildCard(it));
+
+  if (it.updatedAt){
+    const meta = document.createElement('div');
+    meta.className = 'vc-meta';
+    meta.textContent = '🕒 ' + dateLabel(it.updatedAt);
+    body.appendChild(meta);
+  }
+  card.appendChild(body);
+
+  if (expandedCards.has(it.id)) card.classList.add('open');
+  return card;
+}
+function cardActBtn(act, idx, title, glyph){
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'row-btn';
+  b.dataset.act = act;
+  b.dataset.idx = String(idx);
+  b.title = title;
+  b.textContent = glyph;
+  return b;
+}
+function edFoot(saveAct, onCancel){
+  const f = document.createElement('div');
+  f.className = 'ed-foot';
+  const cancel = document.createElement('button');
+  cancel.type = 'button';
+  cancel.className = 'btn-ghost';
+  cancel.textContent = 'Batal';
+  cancel.addEventListener('click', onCancel);
+  const ok = document.createElement('button');
+  ok.type = 'button';
+  ok.className = 'btn-save';
+  ok.dataset.act = saveAct;
+  ok.textContent = 'Simpan';
+  f.append(cancel, ok);
+  return f;
+}
+function kvEditorRow(ed){
+  const { row, grid, title } = repShell(ed.idx === null ? 'General Key baru' : 'Edit General Key');
+  title.classList.add('mono');
+  const k = repField('Key', { mono:true, placeholder:'mis. nama_key', maxlength:200, value: ed.key });
+  const v = repField('Value', { mono:true, placeholder:'value…', maxlength:500, value: ed.value, pw:true });
+  k.inp.classList.add('r-key');
+  v.inp.classList.add('r-value');
+  grid.append(k.f, v.f);
+  const cancel = () => { inlineEditor = null; renderList(); };
+  const del = row.querySelector('.kv-del');
+  del.title = 'Batal edit';
+  del.addEventListener('click', cancel);
+  row.appendChild(edFoot('kv-save', cancel));
+  return row;
+}
+function billEditorRow(ed){
+  const row = billRow(ed.domain, ed.nominal, ed.freq, ed.due);
+  row.querySelector('.rep-title').textContent = ed.idx === null ? 'Tagihan baru' : 'Edit tagihan';
+  const cancel = () => { inlineEditor = null; renderList(); };
+  const del = row.querySelector('.kv-del');
+  del.title = 'Batal edit';
+  del.addEventListener('click', cancel);
+  row.appendChild(edFoot('bill-save', cancel));
+  return row;
+}
+function renderChildCard(it){
+  const kvRows = it.dbs || [];
+  const billRows = (it.bills || []).filter(b => b && (b.domain || b.nominal || b.due || b.url));
+  const cc = document.createElement('div');
+  cc.className = 'cc';
+
+  const tabs = document.createElement('div');
+  tabs.className = 'cc-tabs';
+  const tab = tabByCard.get(it.id) || 'kv';
+  const mkTab = (key, label, count) => {
+    const t = document.createElement('button');
+    t.type = 'button';
+    t.className = 'cc-tab' + (tab === key ? ' active' : '');
+    t.dataset.act = 'tab';
+    t.dataset.tab = key;
+    const s = document.createElement('span');
+    s.textContent = label;
+    const c = document.createElement('span');
+    c.className = 'cc-count';
+    c.textContent = String(count);
+    t.append(s, c);
+    return t;
+  };
+  tabs.append(mkTab('kv', 'General Key', kvRows.length), mkTab('bills', 'Tagihan', billRows.length));
+  cc.appendChild(tabs);
+
+  const type = tab;
+  const rows = type === 'kv' ? kvRows : billRows;
+  const panel = document.createElement('div');
+  panel.className = 'cc-panel';
+  const ed = (inlineEditor && inlineEditor.id === it.id && inlineEditor.type === type) ? inlineEditor : null;
+  let editorAt = -1;
+  if (ed){
+    editorAt = ed.idx === null ? rows.length : Math.min(ed.idx, rows.length - 1);
+    if (rows.length === 0) editorAt = 0;
+  }
+  const mkRow = (row, i) => {
+    if (type === 'kv'){
+      const r = dbValRow(it, i, 'value', row.key || '(key)', String(row.value || ''));
+      if (role === 'admin'){
+        r.appendChild(cardActBtn('kv-edit', i, 'Edit baris', '✎'));
+        r.appendChild(cardActBtn('kv-del', i, 'Hapus baris', '🗑'));
+      }
+      return r;
+    }
+    const r = renderBillRow(row);
+    if (role === 'admin'){
+      const acts = document.createElement('div');
+      acts.className = 'b-acts';
+      acts.appendChild(cardActBtn('bill-edit', i, 'Edit tagihan', '✎'));
+      acts.appendChild(cardActBtn('bill-del', i, 'Hapus tagihan', '🗑'));
+      r.appendChild(acts);
+    }
+    return r;
+  };
+  const mkEditor = () => (type === 'kv' ? kvEditorRow(ed) : billEditorRow(ed));
+  if (!rows.length && !ed){
+    const emp = document.createElement('div');
+    emp.className = 'cc-empty';
+    emp.textContent = type === 'kv' ? 'Belum ada key/value.' : 'Belum ada tagihan.';
+    panel.appendChild(emp);
+  }else{
+    rows.forEach((row, i) => {
+      if (ed && i === editorAt) panel.appendChild(mkEditor());
+      if (!(ed && i === ed.idx)) panel.appendChild(mkRow(row, i));
+    });
+    if (ed && editorAt === rows.length) panel.appendChild(mkEditor());
+  }
+  if (role === 'admin'){
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'cc-add';
+    add.dataset.act = type === 'kv' ? 'kv-add' : 'bill-add';
+    add.textContent = type === 'kv' ? '＋ Tambah' : '＋ Tambah tagihan';
+    panel.appendChild(add);
+  }
+  cc.appendChild(panel);
+  return cc;
+}
+function dbValRow(it, idx, field, label, raw){
+  const row = document.createElement('div');
+  row.className = 'vrow';
+  const lbl = document.createElement('span');
+  lbl.className = 'lbl';
+  lbl.textContent = label;
+  row.appendChild(lbl);
+  const sub = 'db:' + idx + ':' + field;
+  const isOpen = kvRevealed.has(it.id + ':' + sub);
+  const val = document.createElement('span');
+  if (!raw){
+    val.className = 'val empty';
+    val.textContent = '—';
+  }else if (!isOpen){
+    val.className = 'val masked';
+    val.textContent = '••••••••';
+  }else{
+    val.className = 'val mono';
+    val.textContent = raw;
+  }
+  row.appendChild(val);
+  if (raw){
+    const eye = document.createElement('button');
+    eye.type = 'button';
+    eye.className = 'row-btn';
+    eye.dataset.act = 'db-reveal';
+    eye.dataset.sub = sub;
+    eye.title = isOpen ? 'Sembunyikan' : 'Tampilkan';
+    eye.textContent = isOpen ? '🙈' : '👁';
+    row.appendChild(eye);
+    const cp = document.createElement('button');
+    cp.type = 'button';
+    cp.className = 'row-btn';
+    cp.dataset.act = 'db-copy';
+    cp.dataset.sub = sub;
+    cp.title = 'Copy ' + label;
+    cp.textContent = '⧉';
+    row.appendChild(cp);
+  }
+  return row;
+}
+function renderLinkRow(field, url){
+  const row = document.createElement('div');
+  row.className = 'vrow';
+  const lbl = document.createElement('span');
+  lbl.className = 'lbl';
+  lbl.textContent = FIELDS.find(x => x.key === field)?.label || field;
+  row.appendChild(lbl);
+  const isUrl = /^https?:\/\//i.test(url);
+  const val = document.createElement(isUrl ? 'a' : 'span');
+  val.className = isUrl ? 'val vc-link' : 'val mono';
+  val.textContent = url;
+  if (isUrl){
+    val.href = url;
+    val.target = '_blank';
+    val.rel = 'noopener noreferrer';
+    val.style.textDecoration = 'none';
+  }
+  row.appendChild(val);
+  const cp = document.createElement('button');
+  cp.type = 'button';
+  cp.className = 'row-btn';
+  cp.dataset.act = 'copy';
+  cp.dataset.field = field;
+  cp.title = 'Copy link';
+  cp.textContent = '⧉';
+  row.appendChild(cp);
+  return row;
+}
+function renderPlainRow(label, text){
+  const row = document.createElement('div');
+  row.className = 'vrow';
+  const lbl = document.createElement('span');
+  lbl.className = 'lbl';
+  lbl.textContent = label;
+  row.appendChild(lbl);
+  const val = document.createElement('span');
+  val.className = 'val mono';
+  val.textContent = text;
+  row.appendChild(val);
+  return row;
+}
+function ymd(d){
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+function daysUntil(dateStr){
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr || '')) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const due = new Date(y, m - 1, d);
+  return Math.round((due - today) / 86400000);
+}
+function parseYmd(s){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
+  if (!m) return null;
+  return new Date(+m[1], +m[2] - 1, +m[3]);
+}
+function nextOccurrence(b){
+  const anchor = parseYmd(b.due);
+  if (!anchor) return null;
+  const n = new Date();
+  const today = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  if (anchor >= today) return anchor;
+  if (b.freq === 'bulanan'){
+    const day = anchor.getDate();
+    let y = today.getFullYear(), m = today.getMonth();
+    let occ = new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()));
+    if (occ < today){
+      m++;
+      if (m > 11){ m = 0; y++; }
+      occ = new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()));
+    }
+    return occ;
+  }
+  if (b.freq === 'tahunan'){
+    const m = anchor.getMonth();
+    const day = anchor.getDate();
+    const clamped = y => new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()));
+    let occ = clamped(today.getFullYear());
+    if (occ < today) occ = clamped(today.getFullYear() + 1);
+    return occ;
+  }
+  return anchor;
+}
+function normFreq(v){
+  return (v === 'bulanan' || v === 'tahunan') ? v : 'once';
+}
+function billDueOk(due){
+  return /^\d{4}-\d{2}-\d{2}$/.test(due);
+}
+function dueOffsetDays(freq){
+  freq = normFreq(freq);
+  return freq === 'bulanan' ? 30 : freq === 'tahunan' ? 365 : 0;
+}
+function addDaysISO(base, n){
+  const d = new Date(base.getTime());
+  d.setDate(d.getDate() + n);
+  return ymd(d);
+}
+function dueFromAnchor(anchor, f){
+  return addDaysISO(anchor || new Date(), dueOffsetDays(f));
+}
+function formatNominal(s){
+  s = String(s ?? '').trim();
+  if (!s) return '';
+  let t = s.replace(/\s+/g, '');
+  let neg = false;
+  if (t[0] === '-'){ neg = true; t = t.slice(1); }
+  if (/^rp[\d.]+$/i.test(t)) t = t.slice(2);
+  else if (/^rp-[\d.]+$/i.test(t)){ neg = true; t = t.slice(3); }
+  if (/^\d+$/.test(t)){
+    const mag = BigInt(t);
+    return (neg && mag !== 0n ? 'Rp -' : 'Rp ') + mag.toLocaleString('id-ID');
+  }
+  if (/^\d{1,3}(\.\d{3})+$/.test(t)){
+    const mag = BigInt(t.replace(/\./g, ''));
+    return (neg && mag !== 0n ? 'Rp -' : 'Rp ') + mag.toLocaleString('id-ID');
+  }
+  return s;
+}
+function renderBillRow(b){
+  const wrap = document.createElement('div');
+  wrap.className = 'vc-bill';
+
+  const l1 = document.createElement('div');
+  l1.className = 'b-line';
+  const dom = document.createElement('span');
+  dom.className = 'b-domain';
+  dom.textContent = b.domain || '(nama layanan)';
+  l1.appendChild(dom);
+  if (b.freq === 'bulanan' || b.freq === 'tahunan'){
+    const chip = document.createElement('span');
+    chip.className = 'b-freq';
+    chip.textContent = b.freq === 'bulanan' ? '⟳ bulanan' : '⟳ tahunan';
+    chip.title = b.freq === 'bulanan' ? 'Tagihan berulang setiap bulan' : 'Tagihan berulang setiap tahun';
+    l1.appendChild(chip);
+  }
+  const occ = nextOccurrence(b);
+  if (occ){
+    const days = daysUntil(ymd(occ));
+    const due = document.createElement('span');
+    due.className = 'b-due';
+    due.title = 'Jatuh tempo';
+    if (days !== null){
+      const warnDays = Number(db?.settings?.reminderDaysBefore ?? 3);
+      if (days < 0) due.classList.add('late');
+      else if (days <= warnDays) due.classList.add('soon');
+      else due.classList.add('ok');
+      due.textContent = '📅 ' + dateLabel(occ.getTime())
+        + ' · ' + (days < 0 ? `terlambat ${-days} hr` : days === 0 ? 'hari ini' : `${days} hr lagi`);
+    }else{
+      due.textContent = '📅 ' + b.due;
+    }
+    l1.appendChild(due);
+  }
+  wrap.appendChild(l1);
+
+  if (b.nominal){
+    const l2 = document.createElement('div');
+    l2.className = 'b-line b-line2';
+    const nom = document.createElement('span');
+    nom.className = 'b-nominal';
+    nom.textContent = formatNominal(b.nominal);
+    l2.appendChild(nom);
+    wrap.appendChild(l2);
+  }
+  return wrap;
+}
+function renderRow(it, f){
+  const row = document.createElement('div');
+  row.className = 'vrow';
+  const lbl = document.createElement('span');
+  lbl.className = 'lbl';
+  lbl.textContent = f.label;
+  row.appendChild(lbl);
+
+  const val = document.createElement('span');
+  const raw = String(it[f.key] ?? '');
+  const open = f.secret && revealed.has(it.id + ':' + f.key);
+  if (!raw){
+    val.className = 'val empty';
+    val.textContent = '—';
+  }else if (f.secret && !open){
+    val.className = 'val masked';
+    val.textContent = '••••••••';
+  }else{
+    val.className = 'val mono';
+    val.textContent = raw;
+  }
+  row.appendChild(val);
+
+  if (raw && f.secret){
+    const eye = document.createElement('button');
+    eye.type = 'button';
+    eye.className = 'row-btn';
+    eye.dataset.act = 'reveal';
+    eye.dataset.field = f.key;
+    eye.title = open ? 'Sembunyikan' : 'Tampilkan';
+    eye.textContent = open ? '🙈' : '👁';
+    row.appendChild(eye);
+  }
+  if (raw){
+    const cp = document.createElement('button');
+    cp.type = 'button';
+    cp.className = 'row-btn';
+    cp.dataset.act = 'copy';
+    cp.dataset.field = f.key;
+    cp.title = 'Copy ' + f.label;
+    cp.textContent = '⧉';
+    row.appendChild(cp);
+  }
+  return row;
+}
+
+$('list').addEventListener('click', async e => {
+  if (e.target.closest('a')) return;
+  const btn = e.target.closest('[data-act]');
+  const card = e.target.closest('.vcard');
+  if (!card) return;
+  const id = card.dataset.id;
+
+  if (!btn){
+    const secHead = e.target.closest('.vc-sec-head');
+    if (secHead){
+      const k = id + ':' + secHead.dataset.sec;
+      if (expandedSections.has(k)) expandedSections.delete(k); else expandedSections.add(k);
+      secHead.parentElement.classList.toggle('open');
+      return;
+    }
+    if (e.target.closest('.rep-row')) return;
+    if (expandedCards.has(id)) expandedCards.delete(id);
+    else expandedCards.add(id);
+    card.classList.toggle('open');
+    return;
+  }
+
+  const act = btn.dataset.act;
+  if (act === 'reveal'){
+    const k = id + ':' + btn.dataset.field;
+    if (revealed.has(k)) revealed.delete(k); else revealed.add(k);
+    renderList();
+  }else if (act === 'copy'){
+    const it = findItem(id);
+    if (!it) return;
+    const ok = await copyText(String(it[btn.dataset.field] ?? ''), btn);
+    if (ok) toast('Tersalin');
+    else toast('Gagal menyalin — salin manual');
+  }else if (act === 'db-reveal'){
+    const k = id + ':' + btn.dataset.sub;
+    if (kvRevealed.has(k)) kvRevealed.delete(k); else kvRevealed.add(k);
+    renderList();
+  }else if (act === 'db-copy'){
+    const it = findItem(id);
+    if (!it) return;
+    const m = /^db:(\d+):value$/.exec(btn.dataset.sub || '');
+    if (!m) return;
+    const entry = (it.dbs || [])[parseInt(m[1], 10)];
+    if (!entry) return;
+    const ok = await copyText(String(entry.value ?? ''), btn);
+    if (ok) toast('Tersalin');
+    else toast('Gagal menyalin — salin manual');
+  }else if (act === 'tab'){
+    const t = btn.dataset.tab;
+    if (t !== 'kv' && t !== 'bills') return;
+    const cur = tabByCard.get(id) || 'kv';
+    if (cur === t) return;
+    tabByCard.set(id, t);
+    renderList();
+  }else if (act === 'kv-add' || act === 'kv-edit'){
+    if (role !== 'admin') return;
+    const it = findItem(id);
+    if (!it) return;
+    let idx = null, key = '', value = '';
+    if (act === 'kv-edit'){
+      idx = parseInt(btn.dataset.idx, 10);
+      if (!Number.isInteger(idx) || idx < 0) return;
+      const row = (it.dbs || [])[idx];
+      if (!row) return;
+      key = String(row.key || '');
+      value = String(row.value || '');
+    }
+    inlineEditor = { id, type: 'kv', idx, key, value };
+    renderList();
+  }else if (act === 'bill-add' || act === 'bill-edit'){
+    if (role !== 'admin') return;
+    const it = findItem(id);
+    if (!it) return;
+    let idx = null, domain = '', nominal = '', freq = 'once', due = '';
+    if (act === 'bill-edit'){
+      idx = parseInt(btn.dataset.idx, 10);
+      if (!Number.isInteger(idx) || idx < 0) return;
+      const row = (it.bills || [])[idx];
+      if (!row) return;
+      domain = String(row.domain || '');
+      nominal = String(row.nominal || '');
+      freq = normFreq(row.freq);
+      due = String(row.due || '');
+    }
+    inlineEditor = { id, type: 'bills', idx, domain, nominal, freq, due };
+    renderList();
+  }else if (act === 'kv-save'){
+    if (role !== 'admin' || !inlineEditor || inlineEditor.id !== id || inlineEditor.type !== 'kv') return;
+    const it = findItem(id);
+    if (!it) return;
+    const rowEl = btn.closest('.rep-row');
+    if (!rowEl) return;
+    const key = rowEl.querySelector('.r-key').value.trim();
+    const value = rowEl.querySelector('.r-value').value;
+    if (!key && !value){
+      rowEl.classList.add('invalid');
+      rowEl.title = 'Minimal salah satu Key atau Value wajib diisi';
+      return;
+    }
+    rowEl.classList.remove('invalid');
+    rowEl.title = '';
+    const dbs = it.dbs || (it.dbs = []);
+    if (inlineEditor.idx === null) dbs.push({ key, value });
+    else dbs[inlineEditor.idx] = { key, value };
+    inlineEditor = null;
+    clearItemReveal(id, true);
+    await persistItem(it);
+    renderList();
+    toast('Baris disimpan');
+  }else if (act === 'bill-save'){
+    if (role !== 'admin' || !inlineEditor || inlineEditor.id !== id || inlineEditor.type !== 'bills') return;
+    const it = findItem(id);
+    if (!it) return;
+    const rowEl = btn.closest('.rep-row');
+    if (!rowEl) return;
+    const domain = rowEl.querySelector('.r-domain').value.trim();
+    const nominal = rowEl.querySelector('.r-nominal').value.trim();
+    const freqEl = rowEl.querySelector('.r-freq:checked');
+    const freq = normFreq(freqEl ? freqEl.value : '');
+    const dueV = rowEl.querySelector('.r-due').value;
+    const dueOk = billDueOk(dueV);
+    const filled = !!(domain || nominal || dueV);
+    if (filled && (!domain || !dueOk)){
+      rowEl.classList.add('invalid');
+      rowEl.title = !domain ? 'Nama layanan wajib diisi' : 'Jatuh tempo wajib diisi';
+      return;
+    }
+    rowEl.classList.remove('invalid');
+    rowEl.title = '';
+    const bills = it.bills || (it.bills = []);
+    if (filled){
+      const prev = inlineEditor.idx !== null ? (bills[inlineEditor.idx] || {}) : {};
+      const obj = {
+        domain,
+        nominal,
+        freq,
+        due: dueV,
+        url: prev.url || '',
+      };
+      if (inlineEditor.idx === null) bills.push(obj);
+      else bills[inlineEditor.idx] = obj;
+    }else if (inlineEditor.idx !== null){
+      bills.splice(inlineEditor.idx, 1);
+    }
+    inlineEditor = null;
+    await persistItem(it);
+    renderList();
+    toast('Tagihan disimpan');
+  }else if (act === 'kv-del'){
+    const idx = parseInt(btn.dataset.idx, 10);
+    if (!Number.isInteger(idx) || idx < 0) return;
+    openConfirm('Hapus baris?', 'Baris key/value ini akan dihapus dari project.', { type:'kv', id, idx });
+  }else if (act === 'bill-del'){
+    const idx = parseInt(btn.dataset.idx, 10);
+    if (!Number.isInteger(idx) || idx < 0) return;
+    openConfirm('Hapus tagihan?', 'Tagihan ini akan dihapus dari project.', { type:'bills', id, idx });
+  }else if (act === 'edit'){
+    openModal(id);
+  }else if (act === 'del'){
+    const it = findItem(id);
+    if (!it) return;
+    openConfirm('Hapus project?', `“${it.name || '(tanpa nama)'}” akan dihapus dari vault.`, { type:'item', id });
+  }
+});
+
+async function copyText(txt, btn){
+  if (!txt) return false;
+  try{
+    if (navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(txt);
+      if (btn){ btn.classList.add('ok'); setTimeout(() => btn.classList.remove('ok'), 900); }
+      return true;
+    }
+  }catch{}
+  try{
+    const ta = document.createElement('textarea');
+    ta.value = txt;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    if (ok && btn){ btn.classList.add('ok'); setTimeout(() => btn.classList.remove('ok'), 900); }
+    if (ok) return true;
+    $('copyText').value = txt;
+    $('copyModal').classList.add('on');
+    $('copyText').select();
+    return false;
+  }catch{
+    $('copyText').value = txt;
+    $('copyModal').classList.add('on');
+    $('copyText').select();
+    return false;
+  }
+}
+$('copyClose').addEventListener('click', () => $('copyModal').classList.remove('on'));
+$('copyDone').addEventListener('click', () => $('copyModal').classList.remove('on'));
+
+function syncOverlayState(){
+  const anyOpen = $('modal').classList.contains('on')
+    || $('confirmModal').classList.contains('on')
+    || $('copyModal').classList.contains('on');
+  for (const id of ['app','lock']){
+    const el = $(id);
+    if (!el) continue;
+    if (anyOpen) el.setAttribute('inert','');
+    else el.removeAttribute('inert');
+  }
+}
+{
+  const obs = new MutationObserver(syncOverlayState);
+  for (const id of ['modal','confirmModal','copyModal']){
+    const el = $(id);
+    if (el) obs.observe(el, { attributes: true, attributeFilter: ['class'] });
+  }
+}
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if ($('modal').classList.contains('on')){ closeModal(); return; }
+  if ($('confirmModal').classList.contains('on')){
+    $('confirmModal').classList.remove('on');
+    pendingDelete = null;
+    return;
+  }
+  if ($('copyModal').classList.contains('on')) $('copyModal').classList.remove('on');
+});
+
+$('search').addEventListener('input', e => {
+  searchQuery = e.target.value;
+  renderList();
+});
+
+function openModal(id){
+  editingId = id || null;
+  inlineEditor = null;
+  const it = id ? findItem(id) : null;
+  $('modalTitle').textContent = it ? 'Edit Project' : 'Tambah Project';
+  $('fi-name').value = it?.name || '';
+  $('fi-host').value = it?.host || '';
+  $('fi-github').value = it?.github || '';
+  $('fi-goLive').value = it?.goLive || '';
+  $('fi-pitchdeck').value = it?.pitchdeck || '';
+  $('fi-overview').value = it?.overview || '';
+  $('fi-plan').value = it?.plan || '';
+  $('fi-email').value = it?.email || '';
+  $('fi-emailPassword').value = it?.emailPassword || '';
+  $('fi-phone').value = it?.phone || '';
+  $('fi-pic').value = it?.pic || '';
+  $('fi-notes').value = it?.notes || '';
+  $('f-name-wrap').classList.remove('invalid');
+  ['fi-emailPassword'].forEach(f => { $(f).type = 'password'; });
+  $('modal').classList.add('on');
+  setTimeout(() => $('fi-name').focus(), 50);
+}
+function closeModal(){
+  $('modal').classList.remove('on');
+  editingId = null;
+}
+$('btnAdd').addEventListener('click', () => { if (role === 'admin') openModal(null); });
+$('modalClose').addEventListener('click', closeModal);
+$('modalCancel').addEventListener('click', closeModal);
+$('modal').addEventListener('mousedown', e => {
+  if (e.target !== $('modal')) return;
+  const onUp = ev => {
+    document.removeEventListener('mouseup', onUp);
+    if (ev.target === $('modal')) closeModal();
+  };
+  document.addEventListener('mouseup', onUp);
+});
+
+function repField(label, opts){
+  opts = opts || {};
+  const f = document.createElement('div');
+  f.className = 'rep-f' + (opts.full ? ' full' : '');
+  const l = document.createElement('label');
+  l.textContent = label;
+  f.appendChild(l);
+  let inp;
+  if (opts.textarea){
+    inp = document.createElement('textarea');
+    inp.rows = 2;
+  }else{
+    inp = document.createElement('input');
+    if (opts.type) inp.type = opts.type;
+  }
+  if (opts.mono) inp.classList.add('mono');
+  if (opts.placeholder) inp.placeholder = opts.placeholder;
+  if (opts.maxlength) inp.maxLength = opts.maxlength;
+  if (opts.value !== undefined && opts.value !== null) inp.value = opts.value;
+  if (opts.pw) inp.setAttribute('autocomplete', 'new-password');
+  if (opts.attrs) for (const k in opts.attrs) inp.setAttribute(k, opts.attrs[k]);
+  f.appendChild(inp);
+  if (opts.pw){
+    const wrap = document.createElement('div');
+    wrap.className = 'pw-wrap';
+    f.replaceChild(wrap, inp);
+    wrap.appendChild(inp);
+    const eye = document.createElement('button');
+    eye.type = 'button';
+    eye.className = 'pw-eye';
+    eye.textContent = '👁';
+    eye.title = 'Tampilkan';
+    eye.addEventListener('click', () => {
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+      eye.textContent = inp.type === 'password' ? '👁' : '🙈';
+    });
+    wrap.appendChild(eye);
+  }
+  return { f, inp };
+}
+function repShell(title){
+  const row = document.createElement('div');
+  row.className = 'rep-row';
+  const h = document.createElement('div');
+  h.className = 'rep-head';
+  const t = document.createElement('span');
+  t.className = 'rep-title';
+  t.textContent = title;
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.className = 'kv-del';
+  del.textContent = '✕';
+  del.title = 'Hapus baris';
+  del.addEventListener('click', () => row.remove());
+  h.append(t, del);
+  const grid = document.createElement('div');
+  grid.className = 'rep-grid';
+  row.append(h, grid);
+  return { row, grid, title: t };
+}
+function billRow(domain, nominal, freq, due){
+  freq = normFreq(freq);
+  let base = parseYmd(String(due || ''));
+  let lastApplied = freq;
+  const { row, grid } = repShell('Tagihan');
+  const a = repField('Nama layanan', { mono:true, placeholder:'mis. namalayanan', maxlength:200, value:domain });
+  const b = repField('Harga', { placeholder:'150000, -5000, atau Rp 150.000', maxlength:100, value:nominal });
+  const c = document.createElement('div');
+  c.className = 'rep-f full';
+  const lab = document.createElement('label');
+  lab.textContent = 'Jatuh tempo';
+  const radios = document.createElement('div');
+  radios.className = 'rep-radio';
+  [['once', 'Sekali bayar (+0)'], ['bulanan', 'Bulanan (+30 hari)'], ['tahunan', 'Tahunan (+365 hari)']].forEach(([v, text]) => {
+    const opt = document.createElement('label');
+    opt.className = 'rr-opt';
+    const r = document.createElement('input');
+    r.type = 'radio';
+    r.name = 'r-freq';
+    r.className = 'r-freq';
+    r.value = v;
+    r.checked = v === freq;
+    const s = document.createElement('span');
+    s.textContent = text;
+    opt.append(r, s);
+    radios.appendChild(opt);
+  });
+  const sub = document.createElement('label');
+  const inp = document.createElement('input');
+  inp.className = 'r-due';
+  inp.type = 'date';
+  const setSub = f => {
+    sub.textContent = f === 'bulanan'
+      ? '+30 hari dari tanggal awal — datepicker tetap bisa diubah *'
+      : f === 'tahunan'
+        ? '+365 hari dari tanggal awal — datepicker tetap bisa diubah *'
+        : '+0 hari (datepicker bebas — inilah tanggal awal) *';
+  };
+  setSub(freq);
+  inp.value = String(due || '');
+  inp.addEventListener('change', () => {
+    base = parseYmd(inp.value);
+  });
+  const applyOffset = () => {
+    const checked = c.querySelector('.r-freq:checked');
+    const f = normFreq(checked ? checked.value : 'once');
+    if (f !== lastApplied) {
+      inp.value = dueFromAnchor(base, f);
+      lastApplied = f;
+    }
+    setSub(f);
+  };
+  radios.addEventListener('change', applyOffset);
+  radios.addEventListener('click', applyOffset);
+  a.inp.classList.add('r-domain');
+  b.inp.classList.add('r-nominal');
+  c.append(lab, radios, sub, inp);
+  grid.append(a.f, b.f, c);
+  return row;
+}
+
+document.querySelectorAll('[data-eye]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const inp = $(btn.dataset.eye);
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+  });
+});
+
+async function saveModal(){
+  if (role !== 'admin' || !vaultKey) return;
+  if (_saving) return;
+  const wasEdit = !!editingId;
+  const name = $('fi-name').value.trim();
+  let bad = false;
+  $('f-name-wrap').classList.toggle('invalid', !name);
+  if (!name) bad = true;
+
+  const dbs = editingId ? (findItem(editingId)?.dbs || []) : [];
+  const bills = editingId ? (findItem(editingId)?.bills || []) : [];
+
+  if (bad) return;
+  _saving = true;
+  $('modalSave').disabled = true;
+  try{
+  const obj = {
+    v: 2,
+    name,
+    host: $('fi-host').value.trim(),
+    github: $('fi-github').value.trim(),
+    goLive: $('fi-goLive').value.trim(),
+    pitchdeck: $('fi-pitchdeck').value.trim(),
+    overview: $('fi-overview').value.trim(),
+    plan: $('fi-plan').value.trim(),
+    email: $('fi-email').value.trim(),
+    emailPassword: $('fi-emailPassword').value,
+    phone: $('fi-phone').value.trim(),
+    pic: $('fi-pic').value.trim(),
+    dbs,
+    bills,
+    notes: $('fi-notes').value.trim(),
+  };
+  const enc = await encryptObj(vaultKey, obj);
+  const now = Date.now();
+  if (editingId){
+    const item = findDbItem(editingId);
+    if (item){
+      item.iv = enc.iv;
+      item.payload = enc.payload;
+      item.updatedAt = now;
+      if (item.deleted) item.deleted = false;
+    }
+    const mem = findItem(editingId);
+    if (mem) Object.assign(mem, obj, { updatedAt: now });
+    clearItemReveal(editingId, true);
+  }else{
+    const id = uid();
+    db.projects.push({ id, updatedAt: now, deleted: false, iv: enc.iv, payload: enc.payload });
+    vaultItems.push({ id, updatedAt: now, ...obj });
+  }
+  closeModal();
+  save();
+  renderList();
+  toast(wasEdit ? 'Project diperbarui' : 'Project ditambahkan');
+  }finally{
+    _saving = false;
+    $('modalSave').disabled = false;
+  }
+}
+$('modalSave').addEventListener('click', saveModal);
+$('modalForm').addEventListener('submit', e => { e.preventDefault(); saveModal(); });
+
+function openConfirm(title, text, target){
+  pendingDelete = target;
+  $('confirmTitle').textContent = title;
+  $('confirmText').textContent = text;
+  $('confirmModal').classList.add('on');
+}
+$('confirmNo').addEventListener('click', () => {
+  $('confirmModal').classList.remove('on');
+  pendingDelete = null;
+});
+$('confirmYes').addEventListener('click', async () => {
+  if (role !== 'admin' || !pendingDelete) return;
+  const t = pendingDelete;
+  pendingDelete = null;
+  $('confirmModal').classList.remove('on');
+  if (t.type === 'kv' || t.type === 'bills'){
+    const it = findItem(t.id);
+    if (!it) return;
+    if (t.type === 'kv'){
+      const dbs = it.dbs || [];
+      if (!dbs[t.idx]) return;
+      if (inlineEditor && inlineEditor.id === t.id && inlineEditor.type === 'kv') inlineEditor = null;
+      dbs.splice(t.idx, 1);
+      clearItemReveal(t.id, true);
+      await persistItem(it);
+      toast('Baris dihapus');
+    }else{
+      const bills = it.bills || [];
+      if (!bills[t.idx]) return;
+      if (inlineEditor && inlineEditor.id === t.id && inlineEditor.type === 'bills') inlineEditor = null;
+      bills.splice(t.idx, 1);
+      await persistItem(it);
+      toast('Tagihan dihapus');
+    }
+    renderList();
+    return;
+  }
+  const item = findDbItem(t.id);
+  if (item){
+    item.deleted = true;
+    item.updatedAt = Date.now();
+  }
+  clearItemReveal(t.id);
+  vaultItems = vaultItems.filter(x => x.id !== t.id);
+  if (inlineEditor && inlineEditor.id === t.id) inlineEditor = null;
+  save();
+  renderList();
+  toast('Project dihapus');
+});
+
+function applyTheme(){
+  const t = localStorage.getItem('theme');
+  if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  else document.documentElement.removeAttribute('data-theme');
+}
+$('btnTheme').addEventListener('click', () => {
+  const light = document.documentElement.getAttribute('data-theme') === 'light';
+  if (light) localStorage.removeItem('theme');
+  else localStorage.setItem('theme', 'light');
+  applyTheme();
+});
+
+$('btnBell').addEventListener('click', e => {
+  e.stopPropagation();
+  $('notifyPanel').classList.toggle('on');
+});
+document.addEventListener('click', e => {
+  const p = $('notifyPanel');
+  if (p.classList.contains('on') && !p.contains(e.target) && e.target !== $('btnBell')){
+    p.classList.remove('on');
+  }
+});
+
+function pushPermState(){
+  try{
+    if (window.OneSignal?.User?.PushNotification?.permission){
+      const p = OneSignal.User.PushNotification.permission();
+      if (p === true || p === 'granted') return 'granted';
+      if (p === 'denied') return 'denied';
+    }
+  }catch{}
+  if (!db?.settings?.pushNotifEnabled) return 'off';
+  try{
+    if (window.Notification?.permission === 'granted') return 'granted';
+    if (window.Notification?.permission === 'denied') return 'denied';
+  }catch{}
+  return 'default';
+}
+function refreshNotifyPanel(){
+  const st = pushPermState();
+  const el = $('npStatus');
+  const enabled = !!db?.settings?.pushNotifEnabled;
+  $('npToggle').checked = enabled;
+  if (st === 'granted' && enabled){
+    el.textContent = 'aktif';
+    el.className = 'np-status on';
+    $('bellBadge').classList.add('on');
+  }else if (st === 'denied'){
+    el.textContent = 'ditolak';
+    el.className = 'np-status denied';
+    $('bellBadge').classList.remove('on');
+  }else{
+    el.textContent = 'nonaktif';
+    el.className = 'np-status off';
+    $('bellBadge').classList.remove('on');
+  }
+  $('npStateLabel').textContent = 'Status: ' + (st === 'granted' ? 'tersubscribe' : st === 'denied' ? 'ditolak browser' : 'belum aktif');
+  if (db?.settings){
+    $('npBillToggle').checked = !!db.settings.billingReminderEnabled;
+    $('npDays').value = Number(db.settings.reminderDaysBefore ?? 3);
+    $('npTime').value = db.settings.reminderTime || '07:00';
+  }
+}
+$('npBillToggle').addEventListener('change', e => {
+  if (!db?.settings) { e.target.checked = false; return; }
+  db.settings.billingReminderEnabled = e.target.checked;
+  save();
+  toast(e.target.checked ? 'Pengingat tagihan aktif — dicek cron harian' : 'Pengingat tagihan nonaktif');
+});
+$('npDays').addEventListener('change', e => {
+  if (!db?.settings) return;
+  let v = parseInt(e.target.value, 10);
+  if (!(v >= 0)) v = 3;
+  v = Math.min(30, v);
+  e.target.value = v;
+  db.settings.reminderDaysBefore = v;
+  save();
+});
+function normTime(s){
+  s = String(s ?? '').trim();
+  if (/^\d{3,4}$/.test(s)){
+    const t = s.padStart(4, '0');
+    s = t.slice(0, 2) + ':' + t.slice(2);
+  }
+  const m = /^(\d{1,2})(?::(\d{1,2}))?$/.exec(s);
+  if (!m) return null;
+  const hh = +m[1];
+  const mm = m[2] === undefined ? 0 : +m[2];
+  if (hh > 23 || mm > 59) return null;
+  return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+}
+$('npTime').addEventListener('change', e => {
+  if (!db?.settings) return;
+  const v = normTime(e.target.value);
+  if (v){
+    e.target.value = v;
+    db.settings.reminderTime = v;
+    if ($('npMsg').textContent.startsWith('Format jam')) $('npMsg').textContent = '';
+    save();
+  }else{
+    e.target.value = db.settings.reminderTime || '07:00';
+    $('npMsg').textContent = 'Format jam: HH:MM (00–23), contoh 07:00';
+  }
+});
+function initOneSignal(){
+  if (!db.settings?.pushNotifEnabled) return;
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal){
+    const osOpts = { appId: ONESIGNAL_APP_ID, notifyButton: { enable: false }, allowLocalhostAsSecureOrigin: true };
+    const osBase = location.pathname.replace(/[^/]*$/, '');
+    if (osBase && osBase !== '/'){
+      osOpts.serviceWorkerPath = osBase + 'OneSignalSDKWorker.js';
+      osOpts.serviceWorkerParam = { scope: osBase };
+    }
+    await OneSignal.init(osOpts);
+    refreshNotifyPanel();
+  });
+}
+function loadOneSignalSDK(){
+  if (document.getElementById('onesignal-sdk')) return;
+  const s = document.createElement('script');
+  s.id = 'onesignal-sdk';
+  s.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+  s.defer = true;
+  s.onload = () => initOneSignal();
+  s.onerror = () => { $('npMsg').textContent = 'Gagal memuat SDK OneSignal'; };
+  document.head.appendChild(s);
+}
+$('npToggle').addEventListener('change', async e => {
+  const on = e.target.checked;
+  db.settings.pushNotifEnabled = on;
+  save();
+  if (on){
+    $('npMsg').textContent = 'Meminta izin push…';
+    loadOneSignalSDK();
+    setTimeout(async () => {
+      let err = '';
+      try{
+        if (window.OneSignal?.Notifications?.requestPermission){
+          await OneSignal.Notifications.requestPermission();
+        }else if (window.Notification && Notification.permission === 'default'){
+          await Notification.requestPermission();
+        }
+      }catch(ex){ err = ex?.message || 'gagal meminta izin'; }
+      let perm = 'default';
+      try{ perm = window.Notification?.permission || 'default'; }catch{}
+      if (perm === 'denied'){
+        db.settings.pushNotifEnabled = false;
+        save();
+        e.target.checked = false;
+        $('npMsg').textContent = 'Izin push ditolak browser';
+      }else if (!err && $('npMsg').textContent === 'Meminta izin push…'){
+        $('npMsg').textContent = '';
+      }else if (err){
+        $('npMsg').textContent = 'Gagal: ' + err;
+      }
+      try{
+        if (window.OneSignal){
+          window.OneSignalDeferred = window.OneSignalDeferred || [];
+          OneSignalDeferred.push(async function(OneSignal){
+            try{ await OneSignal.User.PushNotification.optIn(); }catch{}
+          });
+        }
+      }catch{}
+      refreshNotifyPanel();
+    }, 700);
+  }else{
+    $('npMsg').textContent = '';
+    try{
+      if (window.OneSignal){
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        OneSignalDeferred.push(async function(OneSignal){
+          try{ await OneSignal.User.PushNotification.unsubscribe(); }catch{}
+        });
+      }
+    }catch{}
+    refreshNotifyPanel();
+  }
+});
+$('npTest').addEventListener('click', async () => {
+  if (role !== 'admin') return;
+  const btn = $('npTest');
+  btn.disabled = true;
+  $('npMsg').textContent = 'Mengirim…';
+  try{
+    const r = await fetch(WORKER_URL + '/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        included_segments: ['All'],
+        headings: { en: 'Odoo Vault', id: 'Odoo Vault' },
+        contents: { en: 'Notif uji dari Odoo Vault', id: 'Notif uji dari Odoo Vault' },
+        url: location.origin + location.pathname,
+      })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok && j.ok){
+      $('npMsg').textContent = 'Notif uji terkirim ✓';
+    }else{
+      const err = typeof j.error === 'string' ? j.error : (j.error?.errors?.[0] || JSON.stringify(j.error) || ('HTTP ' + r.status));
+      $('npMsg').textContent = 'Gagal: ' + err;
+    }
+  }catch(e){
+    $('npMsg').textContent = 'Gagal: ' + e.message;
+  }
+  btn.disabled = false;
+});
+
+async function init(){
+  applyTheme();
+  if (!(window.crypto && crypto.subtle)){
+    $('splash').classList.add('off');
+    $('secureError').classList.add('on');
+    return;
+  }
+  const local = localLoad();
+  let remote = null;
+  try{
+    remote = await gistLoad();
+  }catch(e){
+    if (e && e.message === 'gist-missing'){
+      showBanner('Data server tidak ditemukan — memakai cache lokal', 'warn');
+    }else{
+      _metaDirty = true;
+      showBanner('Offline — gagal memuat dari Gist, memakai cache lokal', 'warn');
+    }
+  }
+  if (remote && local) db = mergeOnLoad(remote, local);
+  else db = normalizeDb(remote || local || freshDb());
+  if (remote?.meta && local?.meta && remote.meta.salt !== local.meta.salt){
+    try{
+      _migrateLocalKey = await deriveKey(PASS_ADMIN, b64ToBytes(local.meta.salt));
+    }catch{
+      _migrateLocalKey = null;
+    }
+    if (db.projects.some(p => p.iv && p.payload)){
+      setPersistentBanner('Vault lokal berbeda dari server — item lokal akan otomatis dipindahkan ke vault server.', 'warn');
+    }
+  }
+  const sessPw = loadSession();
+  if (sessPw){
+    const ok = await attemptUnlock(sessPw, true);
+    if (ok){
+      $('splash').classList.add('off');
+      $('search').focus();
+      return;
+    }
+  }
+  $('splash').classList.add('off');
+  $('lock').classList.remove('hidden');
+  $('lockPw').focus();
+}
+init().catch(e => {
+  console.error(e);
+  $('splash').classList.add('off');
+  $('lock').classList.remove('hidden');
+  showBanner('Terjadi kesalahan saat memuat vault — coba muat ulang halaman', 'err');
+});
 </script>
 </body>
 </html>
