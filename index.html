@@ -134,13 +134,10 @@ main::-webkit-scrollbar-thumb:hover{background:var(--accent)}
 .vcard.open .vc-chevron{transform:rotate(90deg)}
 .vc-body{display:none;padding-top:10px;border-top:1px solid var(--bd);margin-top:10px}
 .vcard.open .vc-body{display:block}
-.kv-del{width:28px;height:28px;border-radius:6px;border:1px solid transparent;color:var(--red);font-size:.75rem;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.kv-del:hover{border-color:var(--red);background:rgba(248,113,113,.1)}
 .rep-row{border:1px solid var(--bd);border-radius:9px;padding:10px;background:var(--card);display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
 .rep-row.invalid{border-color:var(--red)}
-.rep-head{display:flex;align-items:center;justify-content:space-between}
-.rep-title{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
 .rep-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rep-grid.stack{grid-template-columns:1fr}
 .rep-f{display:flex;flex-direction:column;gap:3px;min-width:0}
 .rep-f.full{grid-column:1/-1}
 .rep-f label{font-size:.65rem;color:var(--muted)}
@@ -189,8 +186,6 @@ main::-webkit-scrollbar-thumb:hover{background:var(--accent)}
 .cc-add{width:100%;padding:7px;margin-top:8px;border-radius:7px;border:1px dashed var(--bd);background:transparent;color:var(--muted);font-size:.73rem;font-weight:600;transition:border-color .15s,color .15s}
 .cc-add:hover{border-color:var(--accent);color:var(--accent2)}
 .b-acts{display:flex;gap:4px;justify-content:flex-end;margin-top:2px}
-.ed-foot{display:flex;gap:8px;justify-content:flex-end;padding-top:2px}
-.ed-foot .btn-ghost,.ed-foot .btn-save{padding:6px 14px;font-size:.73rem;border-radius:7px}
 .vc-bill{display:flex;flex-direction:column;gap:4px;background:var(--surface);border:1px solid var(--bd);border-radius:8px;padding:7px 10px;margin-bottom:6px}
 .b-line{display:flex;align-items:center;gap:8px;min-width:0}
 .vc-bill .b-domain{font-family:var(--mono);font-size:.74rem;font-weight:700}
@@ -213,7 +208,6 @@ main::-webkit-scrollbar-thumb:hover{background:var(--accent)}
 .mbody::-webkit-scrollbar-track{background:transparent}
 .mbody::-webkit-scrollbar-thumb{background:var(--dim);border-radius:8px}
 .mbody::-webkit-scrollbar-thumb:hover{background:var(--accent)}
-.fgroup{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--accent2);margin-top:4px}
 .field label{display:block;font-size:.7rem;color:var(--muted);margin-bottom:4px}
 .field input,.field select,.field textarea{width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--bd);background:var(--card);font-size:.8rem;outline:none;transition:border-color .15s}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
@@ -223,8 +217,8 @@ main::-webkit-scrollbar-thumb:hover{background:var(--accent)}
 .field.invalid input{border-color:var(--red)}
 .field.invalid .err{display:block}
 .pw-wrap{position:relative}
-.pw-wrap input{padding-right:36px}
-.pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:5px;color:var(--muted);font-size:.75rem}
+.pw-wrap input{display:block;padding-right:36px}
+.pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:5px;color:var(--muted);font-size:.75rem;display:flex;align-items:center;justify-content:center;line-height:1}
 .pw-eye:hover{color:var(--accent2)}
 .mfoot{display:flex;gap:10px;padding:14px 20px;border-top:1px solid var(--bd)}
 .mfoot button{flex:1;padding:10px;border-radius:8px;font-weight:800;font-size:.8rem}
@@ -265,7 +259,10 @@ main::-webkit-scrollbar-thumb:hover{background:var(--accent)}
     <div class="lock-ico">🔐</div>
     <div class="lock-title">Aliria Vault</div>
     <div class="lock-sub" id="lockSub">Masukkan password untuk membuka vault</div>
-    <input class="lock-input" id="lockPw" type="password" placeholder="••••••••" autocomplete="off" maxlength="64" required>
+    <div class="pw-wrap">
+      <input class="lock-input" id="lockPw" type="password" placeholder="••••••••" autocomplete="off" maxlength="64" required>
+      <button class="pw-eye" type="button" data-eye="lockPw" title="Tampilkan password">👁</button>
+    </div>
     <div class="lock-err" id="lockErr"></div>
     <button class="lock-btn" id="lockBtn" type="submit">Buka Vault</button>
     <div class="lock-hint" id="lockHint"></div>
@@ -330,7 +327,6 @@ main::-webkit-scrollbar-thumb:hover{background:var(--accent)}
       <button class="mclose" type="button" id="modalClose">✕</button>
     </div>
     <div class="mbody">
-      <div class="fgroup">Parent (master)</div>
       <div class="field" id="f-name-wrap">
         <label for="fi-name">Nama project *</label>
         <input id="fi-name" maxlength="200" placeholder="mis. namaproject" required>
@@ -380,7 +376,6 @@ main::-webkit-scrollbar-thumb:hover{background:var(--accent)}
         <input id="fi-pic" maxlength="100" placeholder="mis. Nama" autocomplete="off">
       </div>
 
-      <div class="fgroup">Lainnya</div>
       <div class="field">
         <label for="fi-notes">Catatan</label>
         <textarea id="fi-notes" maxlength="500" placeholder="Catatan opsional…"></textarea>
@@ -412,6 +407,17 @@ main::-webkit-scrollbar-thumb:hover{background:var(--accent)}
       <textarea id="copyText" readonly></textarea>
     </div>
     <div class="mfoot"><button class="btn-ghost" type="button" id="copyDone">Tutup</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="rowModal">
+  <div class="mbox">
+    <div class="mhead"><h2 id="rowModalTitle">Edit</h2><button class="mclose" type="button" id="rowModalClose">✕</button></div>
+    <div class="mbody" id="rowModalBody"></div>
+    <div class="mfoot">
+      <button class="btn-ghost" type="button" id="rowModalCancel">Batal</button>
+      <button class="btn-save" type="button" id="rowModalSave">Simpan</button>
+    </div>
   </div>
 </div>
 
@@ -1074,46 +1080,18 @@ function cardActBtn(act, idx, title, glyph){
   b.textContent = glyph;
   return b;
 }
-function edFoot(saveAct, onCancel){
-  const f = document.createElement('div');
-  f.className = 'ed-foot';
-  const cancel = document.createElement('button');
-  cancel.type = 'button';
-  cancel.className = 'btn-ghost';
-  cancel.textContent = 'Batal';
-  cancel.addEventListener('click', onCancel);
-  const ok = document.createElement('button');
-  ok.type = 'button';
-  ok.className = 'btn-save';
-  ok.dataset.act = saveAct;
-  ok.textContent = 'Simpan';
-  f.append(cancel, ok);
-  return f;
-}
 function kvEditorRow(ed){
-  const { row, grid, title } = repShell(ed.idx === null ? 'General Key baru' : 'Edit General Key');
-  title.classList.add('mono');
+  const { row, grid } = repShell();
+  grid.classList.add('stack');
   const k = repField('Key', { mono:true, placeholder:'mis. nama_key', maxlength:200, value: ed.key });
   const v = repField('Value', { mono:true, placeholder:'value…', maxlength:500, value: ed.value, pw:true });
   k.inp.classList.add('r-key');
   v.inp.classList.add('r-value');
   grid.append(k.f, v.f);
-  const cancel = () => { inlineEditor = null; renderList(); };
-  const del = row.querySelector('.kv-del');
-  del.title = 'Batal edit';
-  del.addEventListener('click', cancel);
-  row.appendChild(edFoot('kv-save', cancel));
   return row;
 }
 function billEditorRow(ed){
-  const row = billRow(ed.domain, ed.nominal, ed.freq, ed.due);
-  row.querySelector('.rep-title').textContent = ed.idx === null ? 'Tagihan baru' : 'Edit tagihan';
-  const cancel = () => { inlineEditor = null; renderList(); };
-  const del = row.querySelector('.kv-del');
-  del.title = 'Batal edit';
-  del.addEventListener('click', cancel);
-  row.appendChild(edFoot('bill-save', cancel));
-  return row;
+  return billRow(ed.domain, ed.nominal, ed.freq, ed.due);
 }
 function renderChildCard(it){
   const kvRows = it.dbs || [];
@@ -1145,12 +1123,6 @@ function renderChildCard(it){
   const rows = type === 'kv' ? kvRows : billRows;
   const panel = document.createElement('div');
   panel.className = 'cc-panel';
-  const ed = (inlineEditor && inlineEditor.id === it.id && inlineEditor.type === type) ? inlineEditor : null;
-  let editorAt = -1;
-  if (ed){
-    editorAt = ed.idx === null ? rows.length : Math.min(ed.idx, rows.length - 1);
-    if (rows.length === 0) editorAt = 0;
-  }
   const mkRow = (row, i) => {
     if (type === 'kv'){
       const r = dbValRow(it, i, 'value', row.key || '(key)', String(row.value || ''));
@@ -1170,18 +1142,13 @@ function renderChildCard(it){
     }
     return r;
   };
-  const mkEditor = () => (type === 'kv' ? kvEditorRow(ed) : billEditorRow(ed));
-  if (!rows.length && !ed){
+  if (!rows.length){
     const emp = document.createElement('div');
     emp.className = 'cc-empty';
     emp.textContent = type === 'kv' ? 'Belum ada key/value.' : 'Belum ada tagihan.';
     panel.appendChild(emp);
   }else{
-    rows.forEach((row, i) => {
-      if (ed && i === editorAt) panel.appendChild(mkEditor());
-      if (!(ed && i === ed.idx)) panel.appendChild(mkRow(row, i));
-    });
-    if (ed && editorAt === rows.length) panel.appendChild(mkEditor());
+    rows.forEach((row, i) => panel.appendChild(mkRow(row, i)));
   }
   if (role === 'admin'){
     const add = document.createElement('button');
@@ -1517,8 +1484,7 @@ $('list').addEventListener('click', async e => {
       key = String(row.key || '');
       value = String(row.value || '');
     }
-    inlineEditor = { id, type: 'kv', idx, key, value };
-    renderList();
+    openRowModal({ id, type: 'kv', idx, key, value });
   }else if (act === 'bill-add' || act === 'bill-edit'){
     if (role !== 'admin') return;
     const it = findItem(id);
@@ -1534,70 +1500,7 @@ $('list').addEventListener('click', async e => {
       freq = normFreq(row.freq);
       due = String(row.due || '');
     }
-    inlineEditor = { id, type: 'bills', idx, domain, nominal, freq, due };
-    renderList();
-  }else if (act === 'kv-save'){
-    if (role !== 'admin' || !inlineEditor || inlineEditor.id !== id || inlineEditor.type !== 'kv') return;
-    const it = findItem(id);
-    if (!it) return;
-    const rowEl = btn.closest('.rep-row');
-    if (!rowEl) return;
-    const key = rowEl.querySelector('.r-key').value.trim();
-    const value = rowEl.querySelector('.r-value').value;
-    if (!key && !value){
-      rowEl.classList.add('invalid');
-      rowEl.title = 'Minimal salah satu Key atau Value wajib diisi';
-      return;
-    }
-    rowEl.classList.remove('invalid');
-    rowEl.title = '';
-    const dbs = it.dbs || (it.dbs = []);
-    if (inlineEditor.idx === null) dbs.push({ key, value });
-    else dbs[inlineEditor.idx] = { key, value };
-    inlineEditor = null;
-    clearItemReveal(id, true);
-    await persistItem(it);
-    renderList();
-    toast('Baris disimpan');
-  }else if (act === 'bill-save'){
-    if (role !== 'admin' || !inlineEditor || inlineEditor.id !== id || inlineEditor.type !== 'bills') return;
-    const it = findItem(id);
-    if (!it) return;
-    const rowEl = btn.closest('.rep-row');
-    if (!rowEl) return;
-    const domain = rowEl.querySelector('.r-domain').value.trim();
-    const nominal = rowEl.querySelector('.r-nominal').value.trim();
-    const freqEl = rowEl.querySelector('.r-freq:checked');
-    const freq = normFreq(freqEl ? freqEl.value : '');
-    const dueV = rowEl.querySelector('.r-due').value;
-    const dueOk = billDueOk(dueV);
-    const filled = !!(domain || nominal || dueV);
-    if (filled && (!domain || !dueOk)){
-      rowEl.classList.add('invalid');
-      rowEl.title = !domain ? 'Nama layanan wajib diisi' : 'Jatuh tempo wajib diisi';
-      return;
-    }
-    rowEl.classList.remove('invalid');
-    rowEl.title = '';
-    const bills = it.bills || (it.bills = []);
-    if (filled){
-      const prev = inlineEditor.idx !== null ? (bills[inlineEditor.idx] || {}) : {};
-      const obj = {
-        domain,
-        nominal,
-        freq,
-        due: dueV,
-        url: prev.url || '',
-      };
-      if (inlineEditor.idx === null) bills.push(obj);
-      else bills[inlineEditor.idx] = obj;
-    }else if (inlineEditor.idx !== null){
-      bills.splice(inlineEditor.idx, 1);
-    }
-    inlineEditor = null;
-    await persistItem(it);
-    renderList();
-    toast('Tagihan disimpan');
+    openRowModal({ id, type: 'bills', idx, domain, nominal, freq, due });
   }else if (act === 'kv-del'){
     const idx = parseInt(btn.dataset.idx, 10);
     if (!Number.isInteger(idx) || idx < 0) return;
@@ -1652,7 +1555,8 @@ $('copyDone').addEventListener('click', () => $('copyModal').classList.remove('o
 function syncOverlayState(){
   const anyOpen = $('modal').classList.contains('on')
     || $('confirmModal').classList.contains('on')
-    || $('copyModal').classList.contains('on');
+    || $('copyModal').classList.contains('on')
+    || $('rowModal').classList.contains('on');
   for (const id of ['app','lock']){
     const el = $(id);
     if (!el) continue;
@@ -1662,7 +1566,7 @@ function syncOverlayState(){
 }
 {
   const obs = new MutationObserver(syncOverlayState);
-  for (const id of ['modal','confirmModal','copyModal']){
+  for (const id of ['modal','confirmModal','copyModal','rowModal']){
     const el = $(id);
     if (el) obs.observe(el, { attributes: true, attributeFilter: ['class'] });
   }
@@ -1675,6 +1579,7 @@ document.addEventListener('keydown', e => {
     pendingDelete = null;
     return;
   }
+  if ($('rowModal').classList.contains('on')){ closeRowModal(); return; }
   if ($('copyModal').classList.contains('on')) $('copyModal').classList.remove('on');
 });
 
@@ -1721,6 +1626,94 @@ $('modal').addEventListener('mousedown', e => {
   document.addEventListener('mouseup', onUp);
 });
 
+function openRowModal(ed){
+  inlineEditor = ed;
+  const isKv = ed.type === 'kv';
+  $('rowModalTitle').textContent = isKv
+    ? (ed.idx === null ? 'General Key baru' : 'Edit General Key')
+    : (ed.idx === null ? 'Tagihan baru' : 'Edit tagihan');
+  const body = $('rowModalBody');
+  body.textContent = '';
+  const row = isKv ? kvEditorRow(ed) : billEditorRow(ed);
+  body.appendChild(row);
+  $('rowModal').classList.add('on');
+  setTimeout(() => { const i = row.querySelector('input'); if (i) i.focus(); }, 50);
+}
+function closeRowModal(){
+  $('rowModal').classList.remove('on');
+  inlineEditor = null;
+}
+async function saveKvRow(){
+  const ed = inlineEditor;
+  if (role !== 'admin' || !ed || ed.type !== 'kv') return;
+  const it = findItem(ed.id);
+  if (!it) return;
+  const rowEl = $('rowModalBody').querySelector('.rep-row');
+  if (!rowEl) return;
+  const key = rowEl.querySelector('.r-key').value.trim();
+  const value = rowEl.querySelector('.r-value').value;
+  if (!key && !value){
+    rowEl.classList.add('invalid');
+    rowEl.title = 'Minimal salah satu Key atau Value wajib diisi';
+    return;
+  }
+  closeRowModal();
+  const dbs = it.dbs || (it.dbs = []);
+  if (ed.idx === null) dbs.push({ key, value });
+  else dbs[ed.idx] = { key, value };
+  clearItemReveal(ed.id, true);
+  await persistItem(it);
+  renderList();
+  toast('Baris disimpan');
+}
+async function saveBillRow(){
+  const ed = inlineEditor;
+  if (role !== 'admin' || !ed || ed.type !== 'bills') return;
+  const it = findItem(ed.id);
+  if (!it) return;
+  const rowEl = $('rowModalBody').querySelector('.rep-row');
+  if (!rowEl) return;
+  const domain = rowEl.querySelector('.r-domain').value.trim();
+  const nominal = rowEl.querySelector('.r-nominal').value.trim();
+  const freqEl = rowEl.querySelector('.r-freq:checked');
+  const freq = normFreq(freqEl ? freqEl.value : '');
+  const dueV = rowEl.querySelector('.r-due').value;
+  const dueOk = billDueOk(dueV);
+  const filled = !!(domain || nominal || dueV);
+  if (filled && (!domain || !dueOk)){
+    rowEl.classList.add('invalid');
+    rowEl.title = !domain ? 'Nama layanan wajib diisi' : 'Jatuh tempo wajib diisi';
+    return;
+  }
+  closeRowModal();
+  const bills = it.bills || (it.bills = []);
+  if (filled){
+    const prev = ed.idx !== null ? (bills[ed.idx] || {}) : {};
+    const obj = { domain, nominal, freq, due: dueV, url: prev.url || '' };
+    if (ed.idx === null) bills.push(obj);
+    else bills[ed.idx] = obj;
+  }else if (ed.idx !== null){
+    bills.splice(ed.idx, 1);
+  }
+  await persistItem(it);
+  renderList();
+  toast('Tagihan disimpan');
+}
+$('rowModalSave').addEventListener('click', () => {
+  if (inlineEditor && inlineEditor.type === 'kv') saveKvRow();
+  else if (inlineEditor && inlineEditor.type === 'bills') saveBillRow();
+});
+$('rowModalClose').addEventListener('click', closeRowModal);
+$('rowModalCancel').addEventListener('click', closeRowModal);
+$('rowModal').addEventListener('mousedown', e => {
+  if (e.target !== $('rowModal')) return;
+  const onUp = ev => {
+    document.removeEventListener('mouseup', onUp);
+    if (ev.target === $('rowModal')) closeRowModal();
+  };
+  document.addEventListener('mouseup', onUp);
+});
+
 function repField(label, opts){
   opts = opts || {};
   const f = document.createElement('div');
@@ -1761,31 +1754,19 @@ function repField(label, opts){
   }
   return { f, inp };
 }
-function repShell(title){
+function repShell(){
   const row = document.createElement('div');
   row.className = 'rep-row';
-  const h = document.createElement('div');
-  h.className = 'rep-head';
-  const t = document.createElement('span');
-  t.className = 'rep-title';
-  t.textContent = title;
-  const del = document.createElement('button');
-  del.type = 'button';
-  del.className = 'kv-del';
-  del.textContent = '✕';
-  del.title = 'Hapus baris';
-  del.addEventListener('click', () => row.remove());
-  h.append(t, del);
   const grid = document.createElement('div');
   grid.className = 'rep-grid';
-  row.append(h, grid);
-  return { row, grid, title: t };
+  row.appendChild(grid);
+  return { row, grid };
 }
 function billRow(domain, nominal, freq, due){
   freq = normFreq(freq);
   let base = parseYmd(String(due || ''));
   let lastApplied = freq;
-  const { row, grid } = repShell('Tagihan');
+  const { row, grid } = repShell();
   const a = repField('Nama layanan', { mono:true, placeholder:'mis. namalayanan', maxlength:200, value:domain });
   const b = repField('Harga', { placeholder:'150000, -5000, atau Rp 150.000', maxlength:100, value:nominal });
   const c = document.createElement('div');

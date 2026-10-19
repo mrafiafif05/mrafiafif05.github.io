@@ -48,15 +48,11 @@ Tambahkan di: **Cloudflare Dashboard → Workers & Pages → `alteco-writer` →
 ```javascript
 export default {
   async fetch(request, env) {
-    const ALLOWED = [
-      'https://mrafiafif05.github.io',
-      'http://localhost',
-      'http://localhost:8080',
-      'http://127.0.0.1:8080',
-    ];
     const origin = request.headers.get('Origin') || '';
+    const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1|nyamnyam354\.github\.io)(:\d+)?$/.test(origin);
+    const ALLOWED = ['https://mrafiafif05.github.io'];
     const cors = {
-      'Access-Control-Allow-Origin': ALLOWED.includes(origin) ? origin : ALLOWED[0],
+      'Access-Control-Allow-Origin': (ALLOWED.includes(origin) || isLocal) ? origin : ALLOWED[0],
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     };
